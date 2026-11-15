@@ -1,0 +1,8 @@
+{
+  "question": "Üniversite öğrencilerinde aralıklı tekrar hatırlamayı nasıl etkiler?",
+  "records": [
+    {"title": "Temsili yayın A", "doi": "10.0000/temsili-a", "source": "Temsili kaynak 1"},
+    {"title": "Temsili yayın A", "doi": "https://doi.org/10.0000/TEMSILI-A", "source": "Temsili kaynak 2"},
+    {"title": "Temsili yayın B", "year": 2020, "author": "Örnek Yazar", "source": "Temsili kaynak 1"}
+  ]
+}
