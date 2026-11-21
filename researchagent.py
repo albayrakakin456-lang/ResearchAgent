@@ -31,7 +31,10 @@ def render_report(question, publications):
         title = publication["title"]
         url = publication["url"]
         label = f"[{title}]({url})" if url else title
-        lines.append(f"- {label} ({', '.join(publication['sources'])})")
+        # DOI varsa metni hazırla, yoksa boş bırak
+        doi_text = f" DOI: {publication['doi']}" if publication["doi"] else ""
+        # Satırı oluştur; DOI yoksa sonuna hiçbir şey eklenmez
+        lines.append(f"- {label} ({', '.join(publication['sources'])}){doi_text}")
     lines.extend(["", "Kanıt ve pasaj doğrulama henüz uygulanmadı.", ""])
     return "\n".join(lines)
 
