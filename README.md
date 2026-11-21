@@ -31,3 +31,6 @@ macOS ve Linux'ta `py` yerine `python3` kullanın. Beklenen sonuç iki benzersiz
 | Kanıt | İddia, yayın, bölüm veya sayfa ve pasajı içeren örnek kayıt |
 | Arayüz | Soru girişi, rapor ve kanıt ayrıntısı taslağı |
 | Test | Tekrar, yalnız özet, kaynak hatası ve desteksiz bulgu senaryoları |
+
+
+Akın buradaydı
