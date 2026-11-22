@@ -67,3 +67,41 @@ Yukarıdaki 5 eşleştirme hatasını ve 4 çökme durumunu düzelttim. Demo art
 Test ettiğim ek durumlar: DOI'siz kaydın DOI'li kayıttan önce gelmesi (birleşiyor), aynı başlık farklı DOI (ayrı kalıyor), aynı başlık farklı yıl (ayrı kalıyor).
 
 Hâlâ açık olanlar: `split_sentences`'in küçük harfle başlayan cümleleri ayırmaması ve olmayan dosya verilince çıkan düz Python hatası (yukarıdaki "Diğer notlar").
+
+## arXiv kaynağı (`arxiv.py`)
+
+`openalex.py` örnek alınarak yazıldı; aynı kayıt biçimini döndürüyor (`title`, `source: "arXiv"`, varsa `doi`, `year`, `author`, `url`, `abstract`).
+
+- **Anahtar gerekmiyor.** arXiv API'si ücretsiz ve kayıtsız. `.env`'ye bir şey eklemeye gerek yok.
+- **Hız sınırı:** arXiv istekler arasında en az 3 saniye beklenmesini istiyor; kod art arda çağrılarda bunu kendisi bekliyor.
+- **Arama:** `"spaced repetition"` → `all:spaced AND all:repetition` (kelimelerin hepsi başlık, özet veya yazarlarda geçmeli).
+- **DOI:** Sadece dergide yayımlanmış makalelerde geliyor. DOI'si olan arXiv kaydı, aynı DOI'li OpenAlex kaydıyla `unique_publications` içinde birleşiyor (test ettim).
+- **Bilinen sınır:** Preprint ile dergi sürümünün yılı farklıysa (örn. arXiv 2016, dergi 2017) ve arXiv kaydında DOI yoksa, ikisi ayrı yayın sayılır.
+- **Kapsam:** arXiv'de bilgisayar bilimi, yapay zekâ, fizik, matematik çok; psikoloji ve eğitim az. Demo sorumuz (aralıklı tekrar) için sonuç az gelebilir.
+
+Tek başına denemek için:
+
+```powershell
+py arxiv.py "spaced repetition"
+```
+
+`researchagent.py`'ye bağlamadım, çünkü o dosya Akın'da. Bağlamak için `main()` içinde `--source` seçeneklerine `"arxiv"` eklenip `openalex` dalındaki gibi `from arxiv import search_arxiv` ile `records = search_arxiv(args.query)` çağrılması yeterli.
+
+## İSTÜN kütüphane erişimi (salı görüşmesi öncesi)
+
+Kaynak: İSTÜN kütüphane sitesi, [Abone Veritabanları](https://library.istun.edu.tr/en/subscribed-databases-1186) ve [Sıkça Sorulan Sorular](https://library.istun.edu.tr/en/sikca-sorulan-sorular-1154) sayfaları.
+
+**Projeyle ilgili abonelikler:** ScienceDirect, Scopus, Web of Science, Springer Nature / SpringerLink, Wiley Online Library, Taylor & Francis, IEEE Xplore, JSTOR, Academic Search Ultimate, ERIC (eğitim – demo sorumuz için önemli), Medline.
+
+**Kampüs dışı erişim:** Sadece VETİS. İSTÜN e-posta kullanıcı adı ve şifresiyle giriliyor; öğrenci, akademisyen ve personel kullanabiliyor.
+
+**Kurallar (önemli):** Sitede otomatik indirme ve sistematik veri aktarımı "kesinlikle yasak" olarak yazıyor. İhlal hâlinde veritabanı erişimi kesilebiliyor, hukuki ve disiplin süreci başlayabiliyor. Ayrıca İSTÜN mensubu olmayanlarla içerik ya da giriş bilgisi paylaşmak yasak.
+
+**Sonuç:** Ajanın VETİS üzerinden bu veritabanlarına otomatik girmesi yasak; denemiyoruz.
+
+**Görüşmede sorulacaklar:**
+1. Abonelik sözleşmeleri, araştırma projesi için metin ve veri madenciliğine (TDM) izin veriyor mu? Elsevier (Scopus, ScienceDirect), Springer Nature, Wiley ve IEEE gibi yayıncıların resmi API/TDM programları var; kütüphane bunlar için kurumsal erişim sağlayabilir mi?
+2. Ajan makaleleri açık kaynaklardan (OpenAlex, arXiv) bulup sadece DOI linki gösterse, kullanıcı tam metne kendi VETİS girişiyle ulaşsa bu kabul edilebilir mi?
+3. Proje için sınırlı, yazılı izin alınabilecek bir süreç veya muhatap kişi var mı?
+
+**Görüşme sonucu:** (salıdan sonra buraya yazılacak)
