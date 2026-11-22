@@ -138,6 +138,93 @@ def bul_kanit(soru, yayin):
     return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, kanitsiz=kanitsiz)
 
 
+def _celiski_sonuc(durum, mesaj, uygun=None, celiskiler=None, atilan=0, not_=""):
+    """Çelişki aramasının her durumda aynı anahtarlı sonucu."""
+    return {
+        "durum": durum,
+        "mesaj": mesaj,
+        "uygun": uygun or [],
+        "celiskiler": celiskiler or [],
+        "atilan": atilan,
+        "not": not_,
+    }
+
+
+def _uygun_mu(yayin):
+    """İlgili, doğrulanmış ve geçerli dayanağı olan yayın mı?"""
+    kanit = yayin.get("kanit") or {}
+    return (bool(kanit.get("ilgili"))
+            and kanit.get("durum") == "doğrulandı"
+            and bool(kanit.get("gecerli")))
+
+
+def _celiski_prompt(soru, uygun):
+    # Her yayın: numara, başlık, bulgu (cümleler gönderilmez)
+    satirlar = "\n".join(
+        f"{i}. Başlık: {y['title']}\n   Bulgu: {y['kanit']['bulgu']}"
+        for i, y in enumerate(uygun, start=1)
+    )
+    return (
+        f"Araştırma sorusu: {soru}\n\n"
+        f"Yayınlar ve bulguları:\n{satirlar}\n\n"
+        "Görev: Bulguları birbiriyle çelişen yayın çiftlerini bul.\n"
+        "Kurallar:\n"
+        "- Sadece AYNI sonuç ölçütü hakkında ZIT sonuç varsa çelişki say.\n"
+        "- Farklı konu, farklı grup ya da sadece farklı etki büyüklüğü "
+        "çelişki değildir.\n"
+        "- Emin değilsen boş liste dön.\n"
+        "- Uydurma yapma; sadece yukarıdaki bulgulara dayan.\n"
+        "- \"yayin_a\" ve \"yayin_b\" yukarıdaki numaralar olsun.\n"
+        "- \"aciklama\" Türkçe ve tek cümle olsun.\n"
+        "Sadece şu JSON'u döndür:\n"
+        '{"celiskiler": [{"yayin_a": 1, "yayin_b": 3, "aciklama": "..."}]}'
+    )
+
+
+def _celiskileri_dogrula(ham, toplam):
+    """Var olmayan/aynı/tekrar eden çiftleri atar, atılanı sayar."""
+    gecerli, atilan, gorulen = [], 0, set()
+    for kayit in ham:
+        if not isinstance(kayit, dict):
+            atilan += 1
+            continue
+        a, b = kayit.get("yayin_a"), kayit.get("yayin_b")
+        # Her ikisi de 1..toplam aralığında tam sayı mı? (bool olamaz)
+        numara_ok = all(
+            isinstance(n, int) and not isinstance(n, bool) and 1 <= n <= toplam
+            for n in (a, b)
+        )
+        # frozenset: (1,3) ile (3,1) aynı çift sayılır
+        if not numara_ok or a == b or frozenset((a, b)) in gorulen:
+            atilan += 1
+            continue
+        gorulen.add(frozenset((a, b)))
+        aciklama = str(kayit.get("aciklama") or "").strip()
+        gecerli.append({"yayin_a": a, "yayin_b": b, "aciklama": aciklama})
+    return gecerli, atilan
+
+
+def celiski_bul(soru, sonuclar):
+    """--analyze sonuçları arasında birbiriyle çelişen bulguları arar."""
+    # Sadece doğrulanmış, ilgili ve dayanaklı olanlar karşılaştırılır
+    uygun = [yayin for yayin in sonuclar if _uygun_mu(yayin)]
+    if len(uygun) < 2:
+        # Tek yayınla çelişki aranamaz; modele hiç sorma
+        return _celiski_sonuc("aranamadı",
+                              "Çelişki aranamadı (yeterli bulgu yok).", uygun)
+    try:
+        cevap = ask(_celiski_prompt(soru, uygun), system=SYSTEM, temperature=0)
+    except LLMError as hata:
+        return _celiski_sonuc("yapılamadı", "Çelişki analizi yapılamadı.",
+                              uygun, not_=str(hata))
+    data = _json_oku(cevap)
+    ham = data.get("celiskiler") if data else None
+    if not isinstance(ham, list):
+        return _celiski_sonuc("yapılamadı", "Çelişki analizi yapılamadı.", uygun)
+    gecerli, atilan = _celiskileri_dogrula(ham, len(uygun))
+    return _celiski_sonuc("tamam", "", uygun, gecerli, atilan)
+
+
 # Dosya doğrudan çalışınca küçük deneme çalışır, import'ta çalışmaz
 if __name__ == "__main__":
     # (bulgu, dayanak cümleleri, beklenen kanıtsız sayılar)
@@ -151,3 +238,27 @@ if __name__ == "__main__":
         sonuc = sayi_kontrol(bulgu, cumleler)
         durum = "OK  " if sonuc == beklenen else "HATA"
         print(f"{durum} {bulgu!r} -> {sonuc} (beklenen {beklenen})")
+
+    # --- Çelişki denemesi: YAPAY ÖRNEK VERİ, gerçek yayın DEĞİL ---
+    def ornek(baslik, bulgu):
+        return {"title": f"ÖRNEK VERİ: {baslik}", "url": "",
+                "kanit": _sonuc("doğrulandı", True, bulgu,
+                                [{"numara": 1, "cumle": "(örnek cümle)"}])}
+
+    CELISKI_DENEMELERI = [
+        # (ad, yapay yayınlar, beklenen çelişki sayısı)
+        ("zıt iki bulgu", [
+            ornek("A", "Aralıklı tekrar sınav başarısını artırır."),
+            ornek("B", "Aralıklı tekrar sınav başarısı üzerinde etkisizdir.")], 1),
+        ("ilgisiz iki bulgu", [
+            ornek("C", "Kahve tüketimi uyku süresini kısaltır."),
+            ornek("D", "Dağ bisikleti bacak kası gücünü artırır.")], 0),
+    ]
+    for ad, yayinlar, beklenen in CELISKI_DENEMELERI:
+        sonuc = celiski_bul("Aralıklı tekrar sınav başarısını artırır mı?", yayinlar)
+        bulunan = len(sonuc["celiskiler"])
+        durum = "OK  " if bulunan == beklenen else "HATA"
+        print(f"{durum} {ad}: durum={sonuc['durum']} "
+              f"bulunan={bulunan} beklenen={beklenen} {sonuc['not']}")
+        for kayit in sonuc["celiskiler"]:
+            print("    ", kayit)

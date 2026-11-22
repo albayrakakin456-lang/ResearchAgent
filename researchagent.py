@@ -90,14 +90,45 @@ def render_kanit(kanit):
     return lines
 
 
-def render_report(question, publications, analyzed=False):
+def yayin_etiketi(publication):
+    """Linki varsa Markdown link, yoksa düz başlık."""
+    title = publication["title"]
+    url = publication.get("url", "")
+    return f"[{title}]({url})" if url else title
+
+
+def render_celiskiler(celiski):
+    """celiski_bul sonucunu 'Çelişen sonuçlar' bölümüne çevirir."""
+    lines = ["", "## Çelişen sonuçlar", ""]
+    # Arama yapılamadıysa/yapılmadıysa nedenini yaz, bölümü bitir
+    if celiski["durum"] != "tamam":
+        lines.append(celiski["mesaj"])
+        return lines
+    if not celiski["celiskiler"]:
+        lines.append("Çelişen çalışma bulunamadı.")
+    for sira, kayit in enumerate(celiski["celiskiler"], start=1):
+        lines.append(f"### Çelişki {sira}")
+        for harf, anahtar in (("A", "yayin_a"), ("B", "yayin_b")):
+            # Model numarası, doğrulanmış 'uygun' listesinin sırasıdır
+            yayin = celiski["uygun"][kayit[anahtar] - 1]
+            lines.append(f"- **{harf}:** {yayin_etiketi(yayin)}")
+            lines.append(f"  - **Bulgu:** {yayin['kanit']['bulgu']}")
+            for item in yayin["kanit"]["gecerli"]:
+                lines.append(f"  - **Dayanak ({item['numara']}. cümle):** {item['cumle']}")
+        if kayit["aciklama"]:
+            lines.append(f"- **Açıklama:** {kayit['aciklama']}")
+        lines.append("")
+    if celiski["atilan"]:
+        lines.append(f"Geçersiz olduğu için atılan çelişki kaydı: {celiski['atilan']}")
+    return lines
+
+
+def render_report(question, publications, analyzed=False, celiski=None):
     lines = ["# ResearchAgent", "", f"**Araştırma sorusu**  {question}", "",
              f"**Benzersiz yayın kaydı**  {len(publications)}", "",
              "## Taranacak yayınlar", ""]
     for publication in publications:
-        title = publication["title"]
-        url = publication["url"]
-        label = f"[{title}]({url})" if url else title
+        label = yayin_etiketi(publication)
         # DOI varsa metni hazırla, yoksa boş bırak
         doi_text = f" DOI: {publication['doi']}" if publication["doi"] else ""
         # Satırı oluştur; DOI yoksa sonuna hiçbir şey eklenmez
@@ -121,6 +152,9 @@ def render_report(question, publications, analyzed=False):
     if skipped:
         lines.extend(["", f"{skipped} yayın analiz edilmedi "
                           f"(ilk {ANALYZE_LIMIT} yayınla sınırlı)."])
+    # Çelişki araması yapıldıysa ayrı bir bölüm olarak ekle
+    if celiski:
+        lines.extend(render_celiskiler(celiski))
     lines.extend(["", footer, ""])
     return "\n".join(lines)
 
@@ -160,9 +194,11 @@ def main():
 
     # Hangi kaynaktan gelirse gelsin aynı fonksiyonlardan geçer
     publications = unique_publications(records)
+    # --analyze kapalıyken çelişki bölümü hiç yazılmaz
+    celiski = None
     if args.analyze:
         # analiz sadece burada import edilir (döngüsel import olmasın)
-        from analiz import bul_kanit
+        from analiz import bul_kanit, celiski_bul
         # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
         # Sadece özeti olanlar sayılır; ilk ANALYZE_LIMIT tanesi seçilir
         selected = [p for p in publications if p["abstract"]][:ANALYZE_LIMIT]
@@ -178,7 +214,10 @@ def main():
                 publication["kanit"] = bul_kanit(question, publication)
             else:
                 publication["kanit"] = {"durum": "analiz edilmedi", "atilan": 0}
-    report = render_report(question, publications, analyzed=args.analyze)
+        # Analiz sonuçları arasında çelişen bulguları ara
+        print("Çelişki aranıyor...")
+        celiski = celiski_bul(question, publications)
+    report = render_report(question, publications, analyzed=args.analyze, celiski=celiski)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")
     print(f"Rapor hazır: {args.output}")
