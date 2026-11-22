@@ -29,6 +29,9 @@ def unique_publications(records):
     return list(publications.values())
 
 
+# --analyze en fazla kaç yayını modele sorsun (maliyet ve süre için)
+ANALYZE_LIMIT = 5
+
 # Cümleyi bitirmeyen, bilinen kısaltmalar (büyük/küçük harf duyarlı)
 ABBREVIATION = re.compile(
     r"(?:\bet al|\be\.g|\bi\.e|\bvs|\bcf|\bDr|\bProf|\bMr|\bMrs|\bMs"
@@ -70,6 +73,8 @@ def render_kanit(kanit):
                  "  - **Dayanak:** yok, modelin verdiği cümle numaraları geçersiz"]
     elif durum == "özet yok":
         lines = ["  - **Analiz:** Özet yok, analiz yapılamadı."]
+    elif durum == "analiz edilmedi":
+        lines = [f"  - **Analiz:** Analiz edilmedi (ilk {ANALYZE_LIMIT} yayınla sınırlı)."]
     else:
         # ilgisiz, yanıt okunamadı, model hatası
         extra = f" ({kanit['not']})" if kanit["not"] else ""
@@ -147,14 +152,16 @@ def main():
         # analiz sadece burada import edilir (döngüsel import olmasın)
         from analiz import bul_kanit
         # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
-        selected = publications[:5]
+        selected = publications[:ANALYZE_LIMIT]
         for number, publication in enumerate(selected, start=1):
             print(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
             publication["kanit"] = bul_kanit(question, publication)
-        # İlk 5 dışındaki özetsizler için model çağrılmaz, not düşülür
-        for publication in publications[5:]:
+        # Limit dışındakilere model çağrılmaz, sadece not düşülür
+        for publication in publications[ANALYZE_LIMIT:]:
             if not publication["abstract"]:
                 publication["kanit"] = bul_kanit(question, publication)
+            else:
+                publication["kanit"] = {"durum": "analiz edilmedi", "atilan": 0}
     report = render_report(question, publications, analyzed=args.analyze)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")
