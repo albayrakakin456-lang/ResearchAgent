@@ -74,9 +74,10 @@ Hâlâ açık olanlar: `split_sentences`'in küçük harfle başlayan cümleleri
 
 - **Anahtar gerekmiyor.** arXiv API'si ücretsiz ve kayıtsız. `.env`'ye bir şey eklemeye gerek yok.
 - **Hız sınırı:** arXiv istekler arasında en az 3 saniye beklenmesini istiyor; kod art arda çağrılarda bunu kendisi bekliyor.
-- **Arama:** `"spaced repetition"` → `all:spaced AND all:repetition` (kelimelerin hepsi başlık, özet veya yazarlarda geçmeli).
+- **Arama (23 Kasım'da güncellendi):** Önce bütün kelimelerin geçtiği makaleler aranıyor (`all:spaced AND all:repetition`). Hiç sonuç çıkmazsa sondaki kelimeler birer birer bırakılarak tekrar aranıyor (`spaced repetition university students` → `spaced repetition university` → `spaced repetition`), çünkü ilk kelimeler genelde konunun kendisi. En son çare olarak kelimelerden herhangi birini içerenler aranıyor (`OR`). Denemede sadece OR kullanmak alakasız sonuçlar getirdi (fizik, kuantum makaleleri), bu yüzden OR en sona kondu. `in`, `the`, `how` gibi bağlaçlar sorgudan çıkarılıyor. Tırnak içindeki ifade tam ifade olarak aranıyor: `"spaced repetition" students` → `all:"spaced repetition" AND all:students`. Önceki sürümde 4 kelimelik sorgular 0 sonuç veriyordu (Akın buldu).
 - **DOI:** Sadece dergide yayımlanmış makalelerde geliyor. DOI'si olan arXiv kaydı, aynı DOI'li OpenAlex kaydıyla `unique_publications` içinde birleşiyor (test ettim).
 - **Bilinen sınır:** Preprint ile dergi sürümünün yılı farklıysa (örn. arXiv 2016, dergi 2017) ve arXiv kaydında DOI yoksa, ikisi ayrı yayın sayılır.
+- **LaTeX temizliği:** arXiv özetleri matematik ifadelerini LaTeX ile yazıyor (`$\mathrm{CRT}_{\mathrm{S}}(4)=\tfrac{3}{2}$`). Raporda anlamsız karakterler çıkmasın diye `clean_latex` bunları düz metne çeviriyor (`CRT_S(4)=3/2`); `\leq`, `\alpha` gibi semboller ≤, α olarak yazılıyor.
 - **Kapsam:** arXiv'de bilgisayar bilimi, yapay zekâ, fizik, matematik çok; psikoloji ve eğitim az. Demo sorumuz (aralıklı tekrar) için sonuç az gelebilir.
 
 Tek başına denemek için:
@@ -85,7 +86,11 @@ Tek başına denemek için:
 py arxiv.py "spaced repetition"
 ```
 
-`researchagent.py`'ye bağlamadım, çünkü o dosya Akın'da. Bağlamak için `main()` içinde `--source` seçeneklerine `"arxiv"` eklenip `openalex` dalındaki gibi `from arxiv import search_arxiv` ile `records = search_arxiv(args.query)` çağrılması yeterli.
+Akın `researchagent.py`'ye bağladı:
+
+```powershell
+py researchagent.py --source arxiv --query "spaced repetition" --output output/rapor.md
+```
 
 ## İSTÜN kütüphane erişimi (salı görüşmesi öncesi)
 
