@@ -152,13 +152,17 @@ def main():
         # analiz sadece burada import edilir (döngüsel import olmasın)
         from analiz import bul_kanit
         # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
-        selected = publications[:ANALYZE_LIMIT]
+        # Sadece özeti olanlar sayılır; ilk ANALYZE_LIMIT tanesi seçilir
+        selected = [p for p in publications if p["abstract"]][:ANALYZE_LIMIT]
         for number, publication in enumerate(selected, start=1):
             print(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
             publication["kanit"] = bul_kanit(question, publication)
-        # Limit dışındakilere model çağrılmaz, sadece not düşülür
-        for publication in publications[ANALYZE_LIMIT:]:
+        # Kalanlara model çağrılmaz, sadece nedenini yazan not düşülür
+        for publication in publications:
+            if "kanit" in publication:
+                continue
             if not publication["abstract"]:
+                # Özet yoksa bul_kanit model çağırmadan "özet yok" döner
                 publication["kanit"] = bul_kanit(question, publication)
             else:
                 publication["kanit"] = {"durum": "analiz edilmedi", "atilan": 0}
