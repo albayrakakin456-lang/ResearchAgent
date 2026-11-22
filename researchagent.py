@@ -37,6 +37,28 @@ def split_sentences(text):
     return [part.strip() for part in parts if part.strip()]
 
 
+def render_kanit(kanit):
+    """bul_kanit sonucunu rapor satırlarına çevirir."""
+    if not kanit:
+        return []
+    durum = kanit["durum"]
+    if durum == "doğrulandı":
+        lines = [f"  - **Bulgu:** {kanit['bulgu']}"]
+        for item in kanit["gecerli"]:
+            lines.append(f"  - **Dayanak ({item['numara']}. cümle):** {item['cumle']}")
+    elif durum == "doğrulanamadı":
+        # Model bulgu verdi ama geçerli cümle numarası gösteremedi
+        lines = [f"  - **Bulgu (DOĞRULANAMADI):** {kanit['bulgu']}",
+                 "  - **Dayanak:** yok, modelin verdiği cümle numaraları geçersiz"]
+    else:
+        # ilgisiz, özet yok, yanıt okunamadı, model hatası
+        extra = f" ({kanit['not']})" if kanit["not"] else ""
+        lines = [f"  - **Analiz:** {durum}{extra}"]
+    if kanit["atilan"]:
+        lines.append(f"  - Geçersiz atılan cümle numarası: {kanit['atilan']}")
+    return lines
+
+
 def render_report(question, publications):
     lines = ["# ResearchAgent", "", f"**Araştırma sorusu**  {question}", "",
              f"**Benzersiz yayın kaydı**  {len(publications)}", "",
@@ -54,6 +76,8 @@ def render_report(question, publications):
         for number, sentence in enumerate(sentences, start=1):
             # İki boşluk girinti: yayının alt maddesi olur
             lines.append(f"  {number}. {sentence}")
+        # Analiz yapıldıysa bulguyu ve dayanağı yaz
+        lines.extend(render_kanit(publication.get("kanit")))
     lines.extend(["", "Kanıt ve pasaj doğrulama henüz uygulanmadı.", ""])
     return "\n".join(lines)
 
@@ -65,6 +89,8 @@ def main():
     parser.add_argument("--input", type=Path)
     parser.add_argument("--query")
     parser.add_argument("--question")
+    # Varsayılan kapalı: eski komutlar aynen çalışır
+    parser.add_argument("--analyze", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -90,7 +116,16 @@ def main():
         question = args.question or args.query
 
     # Hangi kaynaktan gelirse gelsin aynı fonksiyonlardan geçer
-    report = render_report(question, unique_publications(records))
+    publications = unique_publications(records)
+    if args.analyze:
+        # analiz sadece burada import edilir (döngüsel import olmasın)
+        from analiz import bul_kanit
+        # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
+        selected = publications[:5]
+        for number, publication in enumerate(selected, start=1):
+            print(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
+            publication["kanit"] = bul_kanit(question, publication)
+    report = render_report(question, publications)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")
     print(f"Rapor hazır: {args.output}")
