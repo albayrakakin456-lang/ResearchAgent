@@ -83,7 +83,7 @@ Rapor `--output` ile verilen dosyaya yazılır. `output/` klasörü GitHub'a gö
 py researchagent.py --input demo/kayitlar.json --output output/rapor.md
 ```
 
-Demo kayıtlarında 7 farklı yayın var; tekrar eşleştirme tamamlandığında rapor 7 benzersiz yayın göstermelidir. Mevcut sürümdeki farklar için `notlar-yusuf.md` dosyasına bakın. "Temsili" ile başlayan yayınlar ve DOI'leri örnektir; diğer kayıtlar gerçek yayınlardır.
+Demo kayıtlarında 14 kayıt var ve bunlar 7 farklı yayına ait; rapor 7 benzersiz yayın göstermelidir. Eşleştirmenin nasıl çalıştığı ve test edilen durumlar `notlar-yusuf.md` dosyasında. "Temsili" ile başlayan yayınlar ve DOI'leri örnektir; diğer kayıtlar gerçek yayınlardır.
 
 **OpenAlex'ten canlı arama:**
 

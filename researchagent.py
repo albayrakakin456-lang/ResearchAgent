@@ -2,31 +2,101 @@
 import argparse
 import json
 import re
+import unicodedata
 from pathlib import Path
 
 
+# DOI'nin önüne eklenebilen bilinen biçimler (en uzundan kısaya)
+DOI_PREFIXES = (
+    "https://dx.doi.org/", "http://dx.doi.org/",
+    "https://doi.org/", "http://doi.org/",
+    "dx.doi.org/", "doi.org/", "doi:",
+)
+
+
+def normalize_doi(value):
+    """DOI'yi karşılaştırılabilir hâle getirir: '10.xxxx/...' biçimi, küçük harf."""
+    # None ya da sayı gelebilir; önce metne çevir
+    doi = str(value or "").strip().lower()
+    for prefix in DOI_PREFIXES:
+        if doi.startswith(prefix):
+            doi = doi[len(prefix):].strip()
+            break
+    return doi
+
+
+def normalize_title(value):
+    """Başlığı eşleştirme için sadeleştirir: harf/rakam dışı her şey boşluk olur."""
+    # NFKD + birleşik işaretleri silmek "İ" → "i", "’" gibi farkları giderir
+    text = unicodedata.normalize("NFKD", str(value or "").casefold())
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    # Noktalama ve tırnakları boşluğa çevir, fazla boşlukları sil
+    text = re.sub(r"[^\w\s]", " ", text)
+    return " ".join(text.split())
+
+
+def normalize_year(value):
+    """2012 ve "2012" aynı sayılsın; çevrilemezse None."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
 def unique_publications(records):
-    publications = {}
+    """Farklı kaynaklardan gelen aynı yayının kayıtlarını tek yayında birleştirir.
+
+    Önce DOI'ye göre eşleştirir. DOI'si olmayan kayıt, aynı başlık ve yıla
+    sahip yayınla birleşir (o yayının DOI'si olsa bile).
+    """
+    publications = []
+    by_doi = {}
+    by_title = {}
     for record in records:
-        doi = record.get("doi", "").strip().lower().removeprefix("https://doi.org/")
-        title = " ".join(record["title"].casefold().split())
-        key = ("doi", doi) if doi else ("metadata", title, record.get("year"), record.get("author", "").casefold())
-        if key not in publications:
-            publications[key] = {
-                "title": record["title"],
-                "doi": doi,
-                "url": f"https://doi.org/{doi}" if doi else record.get("url", ""),
+        title = str(record.get("title") or "").strip()
+        # Başlık yoksa kaydı tanıyamayız; çökmek yerine atla
+        if not title:
+            print("Uyarı: başlığı olmayan bir kayıt atlandı.")
+            continue
+        source = str(record.get("source") or "").strip() or "Bilinmeyen kaynak"
+        doi = normalize_doi(record.get("doi"))
+        title_key = (normalize_title(title), normalize_year(record.get("year")))
+
+        # 1) Aynı DOI daha önce görüldüyse o yayın
+        publication = by_doi.get(doi) if doi else None
+        # 2) Değilse başlık + yıl. İki farklı DOI ise farklı yayın sayılır.
+        if publication is None:
+            candidate = by_title.get(title_key)
+            if candidate is not None and (not doi or not candidate["doi"]):
+                publication = candidate
+        # 3) Hiçbiri değilse yeni yayın
+        if publication is None:
+            publication = {
+                "title": title,
+                "doi": "",
+                "url": "",
                 "sources": [],
                 # Özet alanı da taşınsın, yoksa burada kaybolur
                 "abstract": "",
             }
-        publication = publications[key]
+            publications.append(publication)
+            by_title.setdefault(title_key, publication)
+
+        # DOI'siz yayına sonradan DOI'li kayıt geldiyse DOI'yi ekle
+        if doi and not publication["doi"]:
+            publication["doi"] = doi
+            publication["url"] = f"https://doi.org/{doi}"
+        if doi:
+            by_doi.setdefault(doi, publication)
+        # DOI yoksa kaydın kendi adresini kullan
+        if not publication["url"] and record.get("url"):
+            publication["url"] = str(record["url"]).strip()
         # Henüz özet yoksa ve bu kayıtta varsa, onu al
         if not publication["abstract"] and record.get("abstract"):
-            publication["abstract"] = record["abstract"].strip()
-        if record["source"] not in publication["sources"]:
-            publication["sources"].append(record["source"])
-    return list(publications.values())
+            publication["abstract"] = str(record["abstract"]).strip()
+        if source not in publication["sources"]:
+            publication["sources"].append(source)
+    return publications
 
 
 # --analyze en fazla kaç yayını modele sorsun (maliyet ve süre için)

@@ -18,7 +18,7 @@ Eski üç temsili kaydı silmedim.
 
 ## Sonuç
 
-Doğru sonuç **7** benzersiz yayın olmalıydı (2 temsili + 5 gerçek). Program **11** buldu, yani 4 yayın tekrar olarak listeleniyor.
+Doğru sonuç **7** benzersiz yayın olmalıydı (2 temsili + 5 gerçek). Program **11** buldu, yani 4 yayın tekrar olarak listeleniyordu. (Düzeltildi, en alttaki "Düzeltme" bölümüne bakın.)
 
 Doğru çalışanlar:
 - `https://doi.org/` öneki ve büyük/küçük harf farkı (Cepeda, ilk iki kayıt).
@@ -53,14 +53,17 @@ Bunları `kayitlar.json`'a eklemedim, demo bozulmasın diye. Kısa Python testle
 - **Olmayan dosya verilince** düz bir Python hatası (`FileNotFoundError` traceback) çıkıyor. Kullanıcıya anlaşılır bir mesaj vermek daha iyi olur.
 - **`output/` klasörü `.gitignore`'da.** Bu yüzden `rapor.md` GitHub'a gönderilmiyor. Rapor çıktısını paylaşmak istersek ya bu notlara ekleyeceğiz ya da örnek bir raporu başka bir klasörde tutacağız.
 
-## Öneriler
+## Düzeltme (22 Kasım) – `unique_publications`
 
-- DOI temizleme için tek bir yardımcı fonksiyon: küçük harfe çevir, boşlukları sil, `doi:`, `https://doi.org/`, `http://doi.org/`, `https://dx.doi.org/`, `http://dx.doi.org/` öneklerini kaldır.
-- DOI'siz kayıtları, başlığı DOI'li bir kayıtla aynı olan yayına bağlamak için ikinci bir eşleştirme turu.
-- Yılı her zaman `int`'e çevirmek; başlıktan noktalamayı temizlemek.
-- Eksik alanlar için `.get()` kullanmak veya bu kayıtları atlayıp uyarı yazdırmak.
+Yukarıdaki 5 eşleştirme hatasını ve 4 çökme durumunu düzelttim. Demo artık doğru sonucu, **7** benzersiz yayını veriyor.
 
-## Sorular
+- **`normalize_doi`:** Küçük harfe çeviriyor, boşlukları siliyor ve `doi:`, `https://doi.org/`, `http://doi.org/`, `https://dx.doi.org/`, `http://dx.doi.org/`, `doi.org/`, `dx.doi.org/` öneklerini kaldırıyor. `None` gelirse boş metin döndürüyor.
+- **`normalize_title`:** Büyük/küçük harf, noktalama, tırnak (’ ve ') ve fazla boşluk farklarını siliyor. Türkçe `İ` sorunu da çözüldü.
+- **`normalize_year`:** `2012` ile `"2012"` aynı sayılıyor.
+- **Eşleştirme sırası:** Önce DOI'ye bakılıyor. DOI yoksa ya da bulunamazsa başlık + yıla bakılıyor. DOI'siz kayıt, aynı başlık ve yıldaki DOI'li yayınla birleşiyor; kayıtların hangi sırayla geldiği önemli değil. İki kayıt aynı başlıkta ama farklı DOI'lerdeyse ayrı yayın sayılıyor (örneğin preprint ve dergi sürümü).
+- **Eksik alanlar:** Başlığı olmayan kayıt bir uyarıyla atlanıyor, kaynağı olmayan kayıt "Bilinmeyen kaynak" oluyor; `null` alanlar artık çökertmiyor.
+- **Yazar artık eşleştirme anahtarında değil.** Kaynaklar yazarı farklı yazıyor ("Cepeda" ve "Nicholas J. Cepeda" gibi); başlık + yıl yeterli.
 
-- Bu hataları ben mi düzelteyim, yoksa `researchagent.py` sende olduğu için sen mi düzeltirsin?
-- Testleri `kayitlar.json` yerine ayrı bir test dosyasında (`tests/` klasörü, `unittest`) tutalım mı?
+Test ettiğim ek durumlar: DOI'siz kaydın DOI'li kayıttan önce gelmesi (birleşiyor), aynı başlık farklı DOI (ayrı kalıyor), aynı başlık farklı yıl (ayrı kalıyor).
+
+Hâlâ açık olanlar: `split_sentences`'in küçük harfle başlayan cümleleri ayırmaması ve olmayan dosya verilince çıkan düz Python hatası (yukarıdaki "Diğer notlar").
