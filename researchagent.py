@@ -68,8 +68,10 @@ def render_kanit(kanit):
         # Model bulgu verdi ama geçerli cümle numarası gösteremedi
         lines = [f"  - **Bulgu (DOĞRULANAMADI):** {kanit['bulgu']}",
                  "  - **Dayanak:** yok, modelin verdiği cümle numaraları geçersiz"]
+    elif durum == "özet yok":
+        lines = ["  - **Analiz:** Özet yok, analiz yapılamadı."]
     else:
-        # ilgisiz, özet yok, yanıt okunamadı, model hatası
+        # ilgisiz, yanıt okunamadı, model hatası
         extra = f" ({kanit['not']})" if kanit["not"] else ""
         lines = [f"  - **Analiz:** {durum}{extra}"]
     if kanit["atilan"]:
@@ -77,7 +79,7 @@ def render_kanit(kanit):
     return lines
 
 
-def render_report(question, publications):
+def render_report(question, publications, analyzed=False):
     lines = ["# ResearchAgent", "", f"**Araştırma sorusu**  {question}", "",
              f"**Benzersiz yayın kaydı**  {len(publications)}", "",
              "## Taranacak yayınlar", ""]
@@ -96,7 +98,13 @@ def render_report(question, publications):
             lines.append(f"  {number}. {sentence}")
         # Analiz yapıldıysa bulguyu ve dayanağı yaz
         lines.extend(render_kanit(publication.get("kanit")))
-    lines.extend(["", "Kanıt ve pasaj doğrulama henüz uygulanmadı.", ""])
+    # Analiz yapıldıysa alt not da buna göre değişir
+    if analyzed:
+        footer = ("Dayanak cümle numaraları özetle doğrulandı; "
+                  "anlamsal doğruluk elle kontrol edilmelidir.")
+    else:
+        footer = "Kanıt ve pasaj doğrulama henüz uygulanmadı."
+    lines.extend(["", footer, ""])
     return "\n".join(lines)
 
 
@@ -143,7 +151,11 @@ def main():
         for number, publication in enumerate(selected, start=1):
             print(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
             publication["kanit"] = bul_kanit(question, publication)
-    report = render_report(question, publications)
+        # İlk 5 dışındaki özetsizler için model çağrılmaz, not düşülür
+        for publication in publications[5:]:
+            if not publication["abstract"]:
+                publication["kanit"] = bul_kanit(question, publication)
+    report = render_report(question, publications, analyzed=args.analyze)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")
     print(f"Rapor hazır: {args.output}")
