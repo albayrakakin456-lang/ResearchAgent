@@ -232,7 +232,7 @@ def render_report(question, publications, analyzed=False, celiski=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     # Varsayılan json: eski komut --source olmadan çalışsın
-    parser.add_argument("--source", choices=["json", "openalex"], default="json")
+    parser.add_argument("--source", choices=["json", "openalex", "arxiv"], default="json")
     parser.add_argument("--input", type=Path)
     parser.add_argument("--query")
     parser.add_argument("--question")
@@ -250,15 +250,20 @@ def main():
         # --question verildiyse dosyadaki sorunun yerine geçer
         question = args.question or data["question"]
     else:
-        # openalex kaynağında arama ifadesi şart
+        # openalex ve arxiv kaynaklarında arama ifadesi şart
         if not args.query:
-            parser.error("--source openalex için --query gerekli")
+            parser.error(f"--source {args.source} için --query gerekli")
         # Paketler sadece burada gerekli, json modu etkilenmesin
-        from openalex import search_openalex
-        records = search_openalex(args.query)
+        if args.source == "openalex":
+            from openalex import search_openalex as search
+            source_name = "OpenAlex"
+        else:
+            from arxiv import search_arxiv as search
+            source_name = "arXiv"
+        records = search(args.query)
         # Sonuç yoksa boş rapor yazmadan çık
         if not records:
-            raise SystemExit("OpenAlex'ten kayıt gelmedi, rapor yazılmadı.")
+            raise SystemExit(f"{source_name} kaynağından kayıt gelmedi, rapor yazılmadı.")
         # Soru verilmezse arama ifadesi kullanılır
         question = args.question or args.query
 
