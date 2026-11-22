@@ -58,8 +58,8 @@ def to_record(work):
     return record
 
 
-def search_openalex(query, max_results=10):
-    """Arama ifadesiyle OpenAlex'te arar, kayıt listesi döndürür."""
+def search_openalex(query, max_results=25):
+    """Arama ifadesiyle OpenAlex'te arar, özeti olan kayıtları döndürür."""
     # .env dosyasındaki değerleri ortama yükle
     load_dotenv()
     api_key = os.getenv("OPENALEX_API_KEY", "").strip()
@@ -69,6 +69,8 @@ def search_openalex(query, max_results=10):
 
     params = {
         "search": query,
+        # Sadece özeti olanlar (dokümanda adı var, kullanımı denendi)
+        "filter": "has_abstract:true",
         # En çok 100 sonuç istenebilir (dokümana göre)
         "per_page": max(1, min(max_results, 100)),
         # Sadece ihtiyacımız olan alanlar gelsin
