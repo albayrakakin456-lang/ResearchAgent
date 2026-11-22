@@ -9,6 +9,21 @@ from dotenv import load_dotenv
 API_URL = "https://api.openalex.org/works"
 
 
+def rebuild_abstract(inverted_index):
+    """Kelime -> konumlar sözlüğünü normal metne çevirir."""
+    # Özet yoksa None gelir; boş metin döndür
+    if not inverted_index:
+        return ""
+    # Her kelimeyi geçtiği her konumla eşleştir
+    positions = []
+    for word, indexes in inverted_index.items():
+        for index in indexes:
+            positions.append((index, word))
+    # Konuma göre sırala, kelimeleri boşlukla birleştir
+    positions.sort()
+    return " ".join(word for _, word in positions)
+
+
 def to_record(work):
     """OpenAlex makalesini kayitlar.json biçimine çevirir."""
     # Başlık yoksa None gelir; boş metne çevir
@@ -36,6 +51,10 @@ def to_record(work):
         record["author"] = author
     if url:
         record["url"] = url
+    # Özet varsa ekle, yoksa alan hiç konmaz
+    abstract = rebuild_abstract(work.get("abstract_inverted_index"))
+    if abstract:
+        record["abstract"] = abstract
     return record
 
 
@@ -53,7 +72,8 @@ def search_openalex(query, max_results=10):
         # En çok 100 sonuç istenebilir (dokümana göre)
         "per_page": max(1, min(max_results, 100)),
         # Sadece ihtiyacımız olan alanlar gelsin
-        "select": "title,doi,publication_year,authorships,primary_location",
+        "select": "title,doi,publication_year,authorships,"
+                  "primary_location,abstract_inverted_index",
     }
     # Anahtar adrese değil başlığa yazılır, hata mesajında sızmaz
     headers = {"Authorization": f"Bearer {api_key}"}

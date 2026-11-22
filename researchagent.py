@@ -1,6 +1,7 @@
 """Build a small report from locally collected academic records."""
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -16,11 +17,24 @@ def unique_publications(records):
                 "doi": doi,
                 "url": f"https://doi.org/{doi}" if doi else record.get("url", ""),
                 "sources": [],
+                # Özet alanı da taşınsın, yoksa burada kaybolur
+                "abstract": "",
             }
         publication = publications[key]
+        # Henüz özet yoksa ve bu kayıtta varsa, onu al
+        if not publication["abstract"] and record.get("abstract"):
+            publication["abstract"] = record["abstract"].strip()
         if record["source"] not in publication["sources"]:
             publication["sources"].append(record["source"])
     return list(publications.values())
+
+
+def split_sentences(text):
+    """Metni basitçe cümlelere böler (et al. gibi yerlerde yanılabilir)."""
+    # . ! ? sonrası boşluk + büyük harf/rakam varsa böl
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-ZÇĞİÖŞÜ0-9])", text.strip())
+    # Boş parçaları at
+    return [part.strip() for part in parts if part.strip()]
 
 
 def render_report(question, publications):
@@ -35,6 +49,11 @@ def render_report(question, publications):
         doi_text = f" DOI: {publication['doi']}" if publication["doi"] else ""
         # Satırı oluştur; DOI yoksa sonuna hiçbir şey eklenmez
         lines.append(f"- {label} ({', '.join(publication['sources'])}){doi_text}")
+        # Özet varsa cümleleri 1'den başlayarak numarala
+        sentences = split_sentences(publication.get("abstract", ""))
+        for number, sentence in enumerate(sentences, start=1):
+            # İki boşluk girinti: yayının alt maddesi olur
+            lines.append(f"  {number}. {sentence}")
     lines.extend(["", "Kanıt ve pasaj doğrulama henüz uygulanmadı.", ""])
     return "\n".join(lines)
 
