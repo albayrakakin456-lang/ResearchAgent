@@ -29,12 +29,30 @@ def unique_publications(records):
     return list(publications.values())
 
 
+# Cümleyi bitirmeyen, bilinen kısaltmalar (büyük/küçük harf duyarlı)
+ABBREVIATION = re.compile(
+    r"(?:\bet al|\be\.g|\bi\.e|\bvs|\bcf|\bDr|\bProf|\bMr|\bMrs|\bMs"
+    r"|\bFigs?|\bEq|\bNo|\bapprox|\bU\.S)\.$"
+)
+# . ! ? sonrası (varsa kapanış tırnağı/parantez) + boşluk + büyük harf
+SENTENCE_END = re.compile(
+    r"""(?:(?<=[.!?])|(?<=[.!?]["'”’)\]]))\s+(?=["'“‘(\[]?[A-ZÇĞİÖŞÜ0-9])"""
+)
+
+
 def split_sentences(text):
-    """Metni basitçe cümlelere böler (et al. gibi yerlerde yanılabilir)."""
-    # . ! ? sonrası boşluk + büyük harf/rakam varsa böl
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-ZÇĞİÖŞÜ0-9])", text.strip())
-    # Boş parçaları at
-    return [part.strip() for part in parts if part.strip()]
+    """Metni basitçe cümlelere böler (küçük harfle başlayan cümlede yanılır)."""
+    result = []
+    for part in SENTENCE_END.split(text.strip()):
+        part = part.strip()
+        if not part:
+            continue
+        # Önceki parça kısaltmayla bittiyse cümle bitmemiştir, birleştir
+        if result and ABBREVIATION.search(result[-1]):
+            result[-1] += " " + part
+        else:
+            result.append(part)
+    return result
 
 
 def render_kanit(kanit):
