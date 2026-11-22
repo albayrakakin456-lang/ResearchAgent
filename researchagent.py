@@ -74,7 +74,8 @@ def render_kanit(kanit):
     elif durum == "özet yok":
         lines = ["  - **Analiz:** Özet yok, analiz yapılamadı."]
     elif durum == "analiz edilmedi":
-        lines = [f"  - **Analiz:** Analiz edilmedi (ilk {ANALYZE_LIMIT} yayınla sınırlı)."]
+        # Yayın altına yazılmaz, raporun sonunda tek satırda özetlenir
+        return []
     else:
         # ilgisiz, yanıt okunamadı, model hatası
         extra = f" ({kanit['not']})" if kanit["not"] else ""
@@ -109,6 +110,12 @@ def render_report(question, publications, analyzed=False):
                   "anlamsal doğruluk elle kontrol edilmelidir.")
     else:
         footer = "Kanıt ve pasaj doğrulama henüz uygulanmadı."
+    # Limit yüzünden atlanan yayınları tek satırda say
+    skipped = sum(1 for p in publications
+                  if p.get("kanit", {}).get("durum") == "analiz edilmedi")
+    if skipped:
+        lines.extend(["", f"{skipped} yayın analiz edilmedi "
+                          f"(ilk {ANALYZE_LIMIT} yayınla sınırlı)."])
     lines.extend(["", footer, ""])
     return "\n".join(lines)
 
