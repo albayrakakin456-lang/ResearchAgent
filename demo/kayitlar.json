@@ -3,6 +3,22 @@
   "records": [
     {"title": "Temsili yayın A", "doi": "10.0000/temsili-a", "source": "Temsili kaynak 1"},
     {"title": "Temsili yayın A", "doi": "https://doi.org/10.0000/TEMSILI-A", "source": "Temsili kaynak 2"},
-    {"title": "Temsili yayın B", "year": 2020, "author": "Örnek Yazar", "source": "Temsili kaynak 1"}
+    {"title": "Temsili yayın B", "year": 2020, "author": "Örnek Yazar", "source": "Temsili kaynak 1"},
+
+    {"title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis", "doi": "10.1037/0033-2909.132.3.354", "year": 2006, "author": "Cepeda", "source": "OpenAlex"},
+    {"title": "Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis", "doi": "https://doi.org/10.1037/0033-2909.132.3.354", "year": 2006, "author": "Cepeda", "source": "Semantic Scholar"},
+    {"title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis.", "doi": "doi:10.1037/0033-2909.132.3.354", "year": 2006, "author": "Cepeda", "source": "PubMed"},
+
+    {"title": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology", "doi": "10.1177/1529100612453266", "year": 2013, "author": "Dunlosky", "source": "OpenAlex"},
+    {"title": "Improving Students’ Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology", "doi": "http://dx.doi.org/10.1177/1529100612453266", "year": 2013, "author": "Dunlosky", "source": "Crossref"},
+
+    {"title": "Spaced Repetition Promotes Efficient and Effective Learning: Policy Implications for Instruction", "doi": "10.1177/2372732215624708", "year": 2016, "author": "Kang", "source": "OpenAlex"},
+    {"title": "Spaced repetition promotes efficient and effective learning:  policy implications for instruction", "year": 2016, "author": "Kang", "source": "Google Scholar"},
+
+    {"title": "Using Spacing to Enhance Diverse Forms of Learning: Review of Recent Research and Implications for Instruction", "year": 2012, "author": "Carpenter", "source": "Semantic Scholar"},
+    {"title": "Using spacing to enhance diverse forms of learning: Review of recent research and implications for instruction", "year": "2012", "author": "Carpenter", "source": "Google Scholar"},
+
+    {"title": "The Distributed Practice Effect on Classroom Learning: A Meta-Analytic Review of Applied Research", "doi": " 10.3390/bs15060771 ", "year": 2025, "author": "Mawson", "source": "OpenAlex"},
+    {"title": "The Distributed Practice Effect on Classroom Learning: A Meta-Analytic Review of Applied Research", "doi": "10.3390/bs15060771", "year": 2025, "author": "Mawson", "source": "Crossref"}
   ]
 }
