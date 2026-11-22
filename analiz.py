@@ -11,7 +11,8 @@ SYSTEM = (
 )
 
 
-def _sonuc(durum, ilgili=False, bulgu="", gecerli=None, atilan=0, not_=""):
+def _sonuc(durum, ilgili=False, bulgu="", gecerli=None, atilan=0, not_="",
+           kanitsiz=None):
     """Her durumda aynı anahtarları taşıyan sonuç sözlüğü."""
     return {
         "ilgili": ilgili,
@@ -20,7 +21,29 @@ def _sonuc(durum, ilgili=False, bulgu="", gecerli=None, atilan=0, not_=""):
         "atilan": atilan,
         "durum": durum,
         "not": not_,
+        "kanitsiz_sayilar": kanitsiz or [],
     }
+
+
+def _sayilar(text):
+    """Metindeki sayıları bulur; virgüllüyü noktalıya çevirir."""
+    # 27.22, 27,22, 45, 0.8 gibi yazımları yakalar
+    found = re.findall(r"\d+(?:[.,]\d+)*", text)
+    return [sayi.replace(",", ".") for sayi in found]
+
+
+def sayi_kontrol(bulgu, cumleler):
+    """Bulgudaki sayılardan dayanak cümlelerde olmayanları döndürür."""
+    # Dayanak cümlelerdeki sayılar bir küme (tekrarsız liste) olur
+    dayanak = set()
+    for cumle in cumleler:
+        dayanak.update(_sayilar(cumle))
+    eksik = []
+    for sayi in _sayilar(bulgu):
+        # Küme kontrolü tam eşleşme arar: 130.85 içinde 30.8 aranmaz
+        if sayi not in dayanak and sayi not in eksik:
+            eksik.append(sayi)
+    return eksik
 
 
 def _prompt(soru, yayin, cumleler):
@@ -88,7 +111,8 @@ def bul_kanit(soru, yayin):
         return _sonuc("özet yok")
 
     try:
-        cevap = ask(_prompt(soru, yayin, cumleler), system=SYSTEM)
+        # temperature=0: aynı soruya mümkün olduğunca aynı cevap
+        cevap = ask(_prompt(soru, yayin, cumleler), system=SYSTEM, temperature=0)
     except LLMError as hata:
         return _sonuc("model hatası", not_=str(hata))
 
@@ -106,5 +130,24 @@ def bul_kanit(soru, yayin):
         return _sonuc("ilgisiz", atilan=atilan)
     # İlgili denmiş ama hiç geçerli numara yoksa güvenme
     if not gecerli:
-        return _sonuc("doğrulanamadı", True, bulgu, [], atilan)
-    return _sonuc("doğrulandı", True, bulgu, gecerli, atilan)
+        # Dayanak yok: bulgudaki her sayı kanıtsız sayılır
+        return _sonuc("doğrulanamadı", True, bulgu, [], atilan,
+                      kanitsiz=sayi_kontrol(bulgu, []))
+    # Bulgudaki sayılar seçilen dayanak cümlelerde var mı?
+    kanitsiz = sayi_kontrol(bulgu, [g["cumle"] for g in gecerli])
+    return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, kanitsiz=kanitsiz)
+
+
+# Dosya doğrudan çalışınca küçük deneme çalışır, import'ta çalışmaz
+if __name__ == "__main__":
+    # (bulgu, dayanak cümleleri, beklenen kanıtsız sayılar)
+    DENEMELER = [
+        ("Puan 30.8 ve 27.22 oldu.", ["The score rose to 30.8."], ["27.22"]),
+        ("Ortalama 27,22 çıktı.", ["The mean was 27.22."], []),
+        ("Skor 30.8 oldu.", ["Skor 130.85 idi."], ["30.8"]),
+        ("%45 düşüş, 0.8 etki.", ["A 45% drop; effect size 0.8."], []),
+    ]
+    for bulgu, cumleler, beklenen in DENEMELER:
+        sonuc = sayi_kontrol(bulgu, cumleler)
+        durum = "OK  " if sonuc == beklenen else "HATA"
+        print(f"{durum} {bulgu!r} -> {sonuc} (beklenen {beklenen})")

@@ -52,7 +52,7 @@ def _post(url, payload, headers=None):
         raise LLMError("Servisten okunamayan bir yanıt geldi.")
 
 
-def _ask_groq(prompt, system):
+def _ask_groq(prompt, system, temperature=None):
     # Anahtar yoksa istek atmadan anlaşılır hata ver
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
@@ -60,7 +60,8 @@ def _ask_groq(prompt, system):
     payload = {
         "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
         "messages": _messages(prompt, system),
-        "temperature": 0.2,
+        # Verilmediyse eski varsayılan (0.2) kalır
+        "temperature": 0.2 if temperature is None else temperature,
     }
     # Anahtar adrese değil başlığa yazılır, hiçbir yere basılmaz
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -71,13 +72,16 @@ def _ask_groq(prompt, system):
         raise LLMError("Groq yanıtı beklenen biçimde değil.")
 
 
-def _ask_ollama(prompt, system):
+def _ask_ollama(prompt, system, temperature=None):
     payload = {
         "model": os.getenv("OLLAMA_MODEL", "qwen3:8b"),
         "messages": _messages(prompt, system),
         # Cevap parça parça değil, tek seferde gelsin
         "stream": False,
     }
+    # Ollama'da eski davranış "ayar yok"; sadece verilirse ekle
+    if temperature is not None:
+        payload["options"] = {"temperature": temperature}
     data = _post(OLLAMA_URL, payload)
     try:
         text = data["message"]["content"]
@@ -87,15 +91,15 @@ def _ask_ollama(prompt, system):
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-def ask(prompt, system=None):
+def ask(prompt, system=None, temperature=None):
     """Seçili sağlayıcıya soruyu sorar, cevap metnini döndürür."""
     # .env değerlerini ortama yükle
     load_dotenv()
     provider = os.getenv("LLM_PROVIDER", "groq").strip().lower()
     if provider == "groq":
-        return _ask_groq(prompt, system)
+        return _ask_groq(prompt, system, temperature)
     if provider == "ollama":
-        return _ask_ollama(prompt, system)
+        return _ask_ollama(prompt, system, temperature)
     raise LLMError(f"Bilinmeyen LLM_PROVIDER: '{provider}'. 'groq' ya da 'ollama' yaz.")
 
 

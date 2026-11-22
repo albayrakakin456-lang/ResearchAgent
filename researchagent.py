@@ -63,14 +63,19 @@ def render_kanit(kanit):
     if not kanit:
         return []
     durum = kanit["durum"]
+    # Bulgudaki dayanaksız rakamlar varsa bulgunun altına uyarı
+    sayi_uyari = []
+    if kanit.get("kanitsiz_sayilar"):
+        sayilar = ", ".join(kanit["kanitsiz_sayilar"])
+        sayi_uyari = [f"  - Uyarı: Bulgudaki şu rakamlar dayanak cümlelerde yok: {sayilar}"]
     if durum == "doğrulandı":
-        lines = [f"  - **Bulgu:** {kanit['bulgu']}"]
+        lines = [f"  - **Bulgu:** {kanit['bulgu']}"] + sayi_uyari
         for item in kanit["gecerli"]:
             lines.append(f"  - **Dayanak ({item['numara']}. cümle):** {item['cumle']}")
     elif durum == "doğrulanamadı":
         # Model bulgu verdi ama geçerli cümle numarası gösteremedi
-        lines = [f"  - **Bulgu (DOĞRULANAMADI):** {kanit['bulgu']}",
-                 "  - **Dayanak:** yok, modelin verdiği cümle numaraları geçersiz"]
+        lines = [f"  - **Bulgu (DOĞRULANAMADI):** {kanit['bulgu']}"] + sayi_uyari
+        lines.append("  - **Dayanak:** yok, modelin verdiği cümle numaraları geçersiz")
     elif durum == "özet yok":
         lines = ["  - **Analiz:** Özet yok, analiz yapılamadı."]
     elif durum == "analiz edilmedi":
