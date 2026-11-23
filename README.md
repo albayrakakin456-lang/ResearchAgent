@@ -39,21 +39,34 @@ cd ResearchAgent
 
 GitHub girişi istenirse tarayıcıdan onaylayın. Bundan sonraki bütün komutlar bu `ResearchAgent` klasörünün içinde çalıştırılır. Terminal başka bir klasördeyse `git` komutları `fatal: not a git repository` hatası verir.
 
-### 4. Paketleri kurun
+### 4. Sanal ortam ve paketler
+
+Sanal ortam (`.venv`), projenin paketlerini bilgisayardaki diğer Python projelerinden ayrı tutar. Bir kez oluşturulur, her yeni terminalde açılır:
+
+```powershell
+py -m venv .venv
+.venv\Scripts\activate
+```
+
+Açıldığında satırın başında `(.venv)` görünür. PowerShell "running scripts is disabled" hatası verirse bir kez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` çalıştırıp tekrar deneyin. macOS ve Linux'ta: `python3 -m venv .venv` ve `source .venv/bin/activate`.
+
+Sonra paketleri kurun:
 
 ```powershell
 py -m pip install -r requirements.txt
 ```
 
-Bu komut `requests` ve `python-dotenv` paketlerini kurar. Yalnızca demo JSON ile çalışmak için gerekmez; OpenAlex ve `--analyze` için gerekir.
+Bu komut `requests`, `python-dotenv` ve web arayüzü için `flask` paketlerini kurar. `requirements.txt` değiştiğinde (örneğin `git pull` sonrası yeni paket eklendiyse) tekrar çalıştırın.
 
 ### 5. API anahtarları (`.env`)
 
-`.env.example` dosyasını kopyalayıp adını `.env` yapın ve içindeki değerleri doldurun:
+Her ekip üyesi kendi OpenAlex ve Groq anahtarını alır; anahtarlar kimseyle paylaşılmaz. `.env.example` dosyasını kopyalayıp adını `.env` yapın ve değerleri **`.env` içine** yazın:
 
 ```powershell
 copy .env.example .env
 ```
+
+`.env.example` GitHub'a gönderilen boş bir şablondur; içine asla gerçek anahtar yazmayın. `git status` çıktısında `.env.example` "modified" görünüyorsa `git restore .env.example` ile eski hâline döndürün (önce anahtarlarınızın `.env` içinde olduğundan emin olun).
 
 | Değişken | Ne için | Nereden |
 | --- | --- | --- |
@@ -71,29 +84,58 @@ py llm.py "Merhaba, tek cümleyle kendini tanıt."
 
 İlki OpenAlex anahtarının bulunup bulunmadığını söyler (anahtarı ekrana yazmaz); ikincisi seçili modelden bir cevap almalıdır.
 
-**API anahtarları ve şifreler asla commit'lenmez.** `.env` dosyası `.gitignore` içinde olduğu için GitHub'a gönderilmez; yalnızca boş şablon olan `.env.example` gönderilir. Bir anahtar yanlışlıkla GitHub'a giderse hemen iptal edilip yenisi alınmalıdır.
+**API anahtarları ve şifreler asla commit'lenmez.** `.env` dosyası `.gitignore` içinde olduğu için GitHub'a gönderilmez; yalnızca boş şablon olan `.env.example` gönderilir. `git add .` yerine değişen dosyaları tek tek ekleyin (`git add README.md tests/`). Bir anahtar yanlışlıkla GitHub'a giderse hemen iptal edilip yenisi alınmalıdır.
 
 ## Çalıştırma
 
-Rapor `--output` ile verilen dosyaya yazılır. `output/` klasörü GitHub'a gönderilmez. macOS ve Linux'ta `py` yerine `python3` kullanın.
+Komutlar `ResearchAgent` klasöründe, sanal ortam açıkken çalıştırılır. macOS ve Linux'ta `py` yerine `python3` kullanın.
 
-**Demo JSON ile (internet ve anahtar gerekmez):**
+### Komut satırı
+
+Rapor `--output` ile verilen dosyaya yazılır. `output/` klasörü GitHub'a gönderilmez.
+
+| Ne yapmak istiyorsun | Gerekenler |
+| --- | --- |
+| `--source json` (varsayılan): demo kayıtlarıyla | İnternet ve anahtar gerekmez |
+| `--source openalex`: OpenAlex'ten canlı arama | `OPENALEX_API_KEY` |
+| `--source arxiv`: arXiv'den canlı arama | Anahtar gerekmez |
+| `--analyze` ekleyerek bulgu, dayanak ve çelişki analizi | Groq anahtarı ya da Ollama |
 
 ```powershell
-py researchagent.py --input demo/kayitlar.json --output output/rapor.md
+# Demo kayıtları: rapor "Benzersiz yayın kaydı 7" göstermeli
+py researchagent.py --source json --input demo/kayitlar.json --output output/rapor.md
+
+# OpenAlex + analiz
+py researchagent.py --source openalex --query "spaced repetition university students" --analyze --output output/rapor_kanit.md
+
+# arXiv
+py researchagent.py --source arxiv --query "spaced repetition" --output output/rapor_arxiv.md
 ```
 
-Demo kayıtlarında 14 kayıt var ve bunlar 7 farklı yayına ait; rapor 7 benzersiz yayın göstermelidir. Eşleştirmenin nasıl çalıştığı ve test edilen durumlar `notlar-yusuf.md` dosyasında. "Temsili" ile başlayan yayınlar ve DOI'leri örnektir; diğer kayıtlar gerçek yayınlardır.
+`--question "..."` ile rapora arama ifadesinden farklı bir soru başlığı yazılabilir. Demo kayıtlarında 14 kayıt 7 farklı yayına aittir; "Temsili" ile başlayanlar örnektir, diğerleri gerçek yayınlardır. `--analyze` özeti olan ilk 5 yayını analiz eder; demo kayıtlarında özet olmadığı için analiz OpenAlex ya da arXiv ile anlamlı sonuç verir.
 
-**OpenAlex'ten canlı arama:**
+Kaynakları tek başına denemek için: `py openalex.py "spaced repetition"` ve `py arxiv.py "spaced repetition"`.
+
+### Web arayüzü
 
 ```powershell
-py researchagent.py --source openalex --query "spaced repetition university students" --question "Üniversite öğrencilerinde aralıklı tekrar hatırlamayı nasıl etkiler?" --output output/rapor.md
+py app.py
 ```
 
-**Özet analizi ile (dil modeli gerekir):** Komutun sonuna `--analyze` ekleyin. Model, özeti olan ilk 5 yayında soruyla ilgili bulguyu ve dayanak cümle numaralarını çıkarır. Demo JSON kayıtlarında özet olmadığı için analiz yalnızca OpenAlex ile anlamlı sonuç verir.
+Ardından tarayıcıda [http://127.0.0.1:5000](http://127.0.0.1:5000) adresini açın. Arayüz soruyu önce modelle kontrol eder (araştırma sorusu değilse arama yapmaz), sonra arar ve analiz eder; bu yüzden Groq anahtarı gerekir.
 
-OpenAlex aramasını tek başına denemek için: `py openalex.py "spaced repetition"`
+- Durdurmak için terminalde `Ctrl+C`.
+- Bir `.py` dosyası değiştiyse sunucuyu durdurup tekrar `py app.py` çalıştırın; `.js` ya da `.css` değiştiyse tarayıcıyı yenilemek yeterli.
+- Aynı anda tek sunucu çalışsın: Windows aynı porta iki sunucunun bağlanmasına izin verebilir ve sayfa eski kodu gösterir. Kontrol: `Get-NetTCPConnection -LocalPort 5000 -State Listen`
+- Groq'un ücretsiz limiti dolarsa (429, "model hatası") birkaç dakika bekleyin.
+
+### Testler
+
+```powershell
+py -m unittest discover tests
+```
+
+Testler `tests/` klasöründedir ve Python'un hazır `unittest` modülünü kullanır. İnternet, API anahtarı ya da model gerektirmezler: modeli çağıran yerlerde `unittest.mock.patch` ile sahte cevap verilir. Sonuç `OK` olmalı; bir test bile başarısızsa commit atmayın.
 
 ## Ekip çalışması
 
