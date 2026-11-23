@@ -257,6 +257,8 @@ def analiz_et(question, publications, ilerleme=print):
 
 # Web arayüzünde seçilebilen kaynaklar (anahtar -> görünen ad)
 KAYNAKLAR = {"openalex": "OpenAlex", "arxiv": "arXiv"}
+# "naber" gibi tek kelimelik girdiler araştırma sorusu sayılmaz
+MIN_KELIME = 3
 
 
 def calistir(sorgu, kaynak="openalex", analiz=True):
@@ -265,6 +267,11 @@ def calistir(sorgu, kaynak="openalex", analiz=True):
              "hata": "", "yayinlar": [], "celiskiler": None, "rapor_md": ""}
     if not sonuc["soru"]:
         sonuc["hata"] = "Lütfen bir araştırma sorusu yaz."
+        return sonuc
+    # Çok kısa girdide arama yapma: arama motoru alakasız şeyler getirir
+    if len(sonuc["soru"].split()) < MIN_KELIME:
+        sonuc["hata"] = (f"Lütfen bir araştırma sorusu yaz (en az {MIN_KELIME} kelime). "
+                         "Örnek: spaced repetition university students")
         return sonuc
     if kaynak not in KAYNAKLAR:
         sonuc["hata"] = "Bilinmeyen kaynak seçildi."

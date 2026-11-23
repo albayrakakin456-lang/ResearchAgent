@@ -20,6 +20,15 @@ const DURUM_SINIFI = {
 };
 const durumSinifi = (durum) => DURUM_SINIFI[durum] || "diger";
 
+// Ekranda gösterilen ad: "doğrulandı" bulgunun doğru olduğu sanılmasın
+const DURUM_ETIKETI = { "doğrulandı": "dayanak doğrulandı" };
+const durumEtiketi = (durum) => DURUM_ETIKETI[durum] || durum;
+const DURUM_ACIKLAMASI = {
+  "doğrulandı": "Modelin gösterdiği dayanak cümleler özette gerçekten var. " +
+    "Bulgunun doğru ve soruyla ilgili olduğunu garanti etmez; elle kontrol et.",
+  "DOĞRULANAMADI": "Model bulgu verdi ama geçerli bir dayanak cümle gösteremedi.",
+};
+
 // Güvenli eleman üretici: veri textContent ile yazılır, HTML olarak yorumlanmaz
 function el(etiket, sinif, metin) {
   const e = document.createElement(etiket);
@@ -154,7 +163,9 @@ function yayinKarti(yayin) {
   const ust = el("div", "kart-ust");
   const sol = el("div");
   sol.append(baslikEleman(yayin), el("p", "meta", metaMetni(yayin)));
-  ust.append(sol, el("span", "rozet " + durumSinifi(yayin.durum), yayin.durum));
+  const rozet = el("span", "rozet " + durumSinifi(yayin.durum), durumEtiketi(yayin.durum));
+  if (DURUM_ACIKLAMASI[yayin.durum]) rozet.title = DURUM_ACIKLAMASI[yayin.durum];
+  ust.append(sol, rozet);
   kart.append(ust);
 
   // Özet cümleleri varsa ve analiz yapıldıysa panel + düğme eklenir
@@ -222,7 +233,7 @@ function celiskiKarti(kayit, yayinlar, sira) {
 function ozetMetni(veri) {
   const sayim = {};
   for (const y of veri.yayinlar) sayim[y.durum] = (sayim[y.durum] || 0) + 1;
-  const parcalar = Object.entries(sayim).map(([durum, adet]) => adet + " " + durum);
+  const parcalar = Object.entries(sayim).map(([durum, adet]) => adet + " " + durumEtiketi(durum));
   return veri.yayinlar.length + " yayın: " + parcalar.join(", ");
 }
 
