@@ -58,7 +58,7 @@ def to_record(work):
     return record
 
 
-def search_openalex(query, max_results=25):
+def search_openalex(query, max_results=10):
     """Arama ifadesiyle OpenAlex'te arar, özeti olan kayıtları döndürür."""
     # .env dosyasındaki değerleri ortama yükle
     load_dotenv()
