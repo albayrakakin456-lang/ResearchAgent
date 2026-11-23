@@ -119,6 +119,37 @@ button.ikincil:hover { background: #eef3ff; }
 
 .not { margin-top: 28px; font-size: 0.875rem; color: var(--soluk); }
 
+/* Parça 3: araç çubuğu ve yazdırma */
+.arac-cubugu { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.arac-cubugu button.ikincil { margin-top: 6px; }
+.yazdir-dayanak { display: none; }
+
+@media print {
+  @page { margin: 14mm; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  main { max-width: none; padding: 0; }
+
+  /* Ekranda işe yarayan, kâğıtta gereksiz olanlar */
+  #aramaFormu, #durumYazisi, #hata, .arac-cubugu, button, header .alt { display: none !important; }
+
+  /* Kartlar sayfa ortasında bölünmesin */
+  .kart, .celiski-kolonlar, .uyari { break-inside: avoid; page-break-inside: avoid; }
+  h2 { break-after: avoid; page-break-after: avoid; }
+  .kart { box-shadow: none; }
+
+  /* Paneller kapalıysa bile dayanak cümleleri kâğıda yazılsın */
+  .yazdir-dayanak { display: block; margin-top: 6px; font-size: 10pt; }
+  .yazdir-dayanak p { margin: 2px 0; padding: 2px 6px; background: #fff2a8; }
+  .cumle-paneli { max-height: none; overflow: visible; }
+
+  /* Rozet renksiz yazdırılsa da okunsun */
+  .rozet { border: 1px solid #555; background: none; color: #000; }
+
+  /* Linkler okunur: renk yerine altı çizili + adres yanında yazılı */
+  a { color: #000; text-decoration: underline; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8.5pt; font-weight: 400; overflow-wrap: anywhere; }
+}
+
 @media (max-width: 640px) {
   .celiski-kolonlar { grid-template-columns: 1fr; }
   .kart-ust { flex-direction: column; }

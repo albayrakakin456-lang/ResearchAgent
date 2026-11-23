@@ -136,6 +136,17 @@ function bulguEleman(yayin) {
   return p;
 }
 
+// ---- Parça 3: yazdırma ve indirme ----
+
+// Sadece yazdırmada görünür: paneller kapalı olsa da PDF'te dayanak yer alsın
+function yazdirDayanak(yayin) {
+  const kutu = el("div", "yazdir-dayanak");
+  for (const d of yayin.dayanak) {
+    kutu.append(el("p", "", "Dayanak (" + d.numara + ". cümle): " + d.cumle));
+  }
+  return kutu;
+}
+
 function yayinKarti(yayin) {
   const kart = el("article", "kart");
   kart.dataset.durum = durumSinifi(yayin.durum);
@@ -155,7 +166,7 @@ function yayinKarti(yayin) {
   if (yayin.bulgu) {
     const bulgu = panelli ? bulguEleman(yayin) : el("p", "bulgu", yayin.bulgu);
     if (panelli) tetikleyiciler.push(bulgu);
-    kart.append(bulgu);
+    kart.append(bulgu, yazdirDayanak(yayin));
   } else if (yayin.durum === "özet yok") {
     kart.append(el("p", "bos-not", "Özet yok, analiz yapılamadı."));
   } else if (yayin.durum === "analiz edilmedi") {
@@ -188,7 +199,7 @@ function celiskiKarti(kayit, yayinlar, sira) {
     const kolon = el("div", "kolon");
     const panel = cumlePaneli(yayin);
     const bulgu = bulguEleman(yayin);
-    kolon.append(baslikEleman(yayin), bulgu, panel);
+    kolon.append(baslikEleman(yayin), bulgu, yazdirDayanak(yayin), panel);
     kolonlar.append(kolon);
     paneller.push(panel);
     // Kendi bulgusuna tıklayınca sadece o yayının paneli açılır
@@ -215,7 +226,11 @@ function ozetMetni(veri) {
   return veri.yayinlar.length + " yayın: " + parcalar.join(", ");
 }
 
+// Son gelen sonuç; "Markdown indir" bunu kullanır (yeni arama yapılmaz)
+let sonSonuc = null;
+
 function sonucuGoster(veri) {
+  sonSonuc = veri;
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
   document.getElementById("sonucOzet").textContent = ozetMetni(veri);
@@ -238,6 +253,26 @@ function hataGoster(mesaj) {
   hataKutusu.textContent = mesaj;
   hataKutusu.hidden = false;
 }
+
+// PDF: tarayıcının yazdırma penceresi açılır, "PDF olarak kaydet" seçilir
+document.getElementById("pdfDugme").addEventListener("click", () => window.print());
+
+// Markdown: render_report çıktısı rapor-YYYY-AA-GG.md olarak iner
+document.getElementById("mdDugme").addEventListener("click", () => {
+  if (!sonSonuc || !sonSonuc.rapor_md) return;
+  const t = new Date();
+  const iki = (n) => String(n).padStart(2, "0");
+  const tarih = t.getFullYear() + "-" + iki(t.getMonth() + 1) + "-" + iki(t.getDate());
+  const blob = new Blob([sonSonuc.rapor_md], { type: "text/markdown;charset=utf-8" });
+  const adres = URL.createObjectURL(blob);
+  const a = el("a");
+  a.href = adres;
+  a.download = "rapor-" + tarih + ".md";
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(adres);
+});
 
 form.addEventListener("submit", async (olay) => {
   // Sayfanın yenilenmesini engelle (Laravel'deki normal form post'u yerine fetch)
