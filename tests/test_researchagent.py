@@ -116,6 +116,15 @@ class SplitSentencesTest(unittest.TestCase):
             'Data came from the "National Institute."', "The sample was large.",
         ])
 
+    def test_istatistik_kisaltmasi_bolmez(self):
+        # OpenAlex'teki gerçek bir özette "Asymp. Sig." üç parçaya bölünüyordu
+        metin = ("The results showed an Asymp. Sig. (2-tailed) value of 0.018. "
+                 "Therefore, it was effective.")
+        self.assertEqual(split_sentences(metin), [
+            "The results showed an Asymp. Sig. (2-tailed) value of 0.018.",
+            "Therefore, it was effective.",
+        ])
+
     def test_bos_metin(self):
         self.assertEqual(split_sentences(""), [])
         self.assertEqual(split_sentences("   "), [])

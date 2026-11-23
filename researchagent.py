@@ -107,7 +107,9 @@ ANALYZE_LIMIT = 5
 # Cümleyi bitirmeyen, bilinen kısaltmalar (büyük/küçük harf duyarlı)
 ABBREVIATION = re.compile(
     r"(?:\bet al|\be\.g|\bi\.e|\bvs|\bcf|\bDr|\bProf|\bMr|\bMrs|\bMs"
-    r"|\bFigs?|\bEq|\bNo|\bapprox|\bU\.S)\.$"
+    r"|\bFigs?|\bEq|\bNo|\bapprox|\bU\.S"
+    # İstatistik: "Asymp. Sig. (2-tailed)" tek cümle kalsın
+    r"|\bAsymp|\bSig)\.$"
 )
 # . ! ? sonrası (varsa kapanış tırnağı/parantez) + boşluk + büyük harf
 SENTENCE_END = re.compile(
