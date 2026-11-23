@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ResearchAgent</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>ResearchAgent</h1>
+      <p class="alt">Makale ara, özetlerden bulguyu çıkar, dayanak cümlesini göster.</p>
+    </header>
+
+    <form id="aramaFormu" class="panel">
+      <label for="soru">Araştırma sorusu</label>
+      <input id="soru" name="soru" type="text" autocomplete="off" required
+             placeholder="spaced repetition university students">
+      <small>İngilizce yazarsan daha iyi sonuç gelir.</small>
+
+      <fieldset>
+        <legend>Kaynak</legend>
+        {% for anahtar, ad in kaynaklar.items() %}
+        <label class="secenek">
+          <input type="radio" name="kaynak" value="{{ anahtar }}" {% if loop.first %}checked{% endif %}>
+          {{ ad }}
+        </label>
+        {% endfor %}
+      </fieldset>
+
+      <div class="satir">
+        <button id="araDugme" type="submit">Ara</button>
+        <span id="durumYazisi" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+
+    <div id="hata" class="hata-kutusu" role="alert" hidden></div>
+
+    <section id="sonuc" hidden>
+      <h2 id="sonucBaslik"></h2>
+      <p id="sonucOzet" class="alt"></p>
+      <div id="yayinlar"></div>
+      <section id="celiskiBolumu" hidden>
+        <h2>Çelişen sonuçlar</h2>
+        <div id="celiskiler"></div>
+      </section>
+      <p class="not">Dayanak cümle numaraları özetle doğrulandı; anlamsal doğruluk elle kontrol edilmelidir.</p>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

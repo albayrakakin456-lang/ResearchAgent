@@ -1,5 +1,7 @@
 """Build a small report from locally collected academic records."""
 import argparse
+import contextlib
+import io
 import json
 import re
 import unicodedata
@@ -229,6 +231,100 @@ def render_report(question, publications, analyzed=False, celiski=None):
     return "\n".join(lines)
 
 
+def analiz_et(question, publications, ilerleme=print):
+    """Yayınlara bulgu ekler (publication["kanit"]), çelişki sonucunu döndürür."""
+    # analiz sadece burada import edilir (döngüsel import olmasın)
+    from analiz import bul_kanit, celiski_bul
+    # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
+    # Sadece özeti olanlar sayılır; ilk ANALYZE_LIMIT tanesi seçilir
+    selected = [p for p in publications if p["abstract"]][:ANALYZE_LIMIT]
+    for number, publication in enumerate(selected, start=1):
+        ilerleme(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
+        publication["kanit"] = bul_kanit(question, publication)
+    # Kalanlara model çağrılmaz, sadece nedenini yazan not düşülür
+    for publication in publications:
+        if "kanit" in publication:
+            continue
+        if not publication["abstract"]:
+            # Özet yoksa bul_kanit model çağırmadan "özet yok" döner
+            publication["kanit"] = bul_kanit(question, publication)
+        else:
+            publication["kanit"] = {"durum": "analiz edilmedi", "atilan": 0}
+    # Analiz sonuçları arasında çelişen bulguları ara
+    ilerleme("Çelişki aranıyor...")
+    return celiski_bul(question, publications)
+
+
+# Web arayüzünde seçilebilen kaynaklar (anahtar -> görünen ad)
+KAYNAKLAR = {"openalex": "OpenAlex", "arxiv": "arXiv"}
+
+
+def calistir(sorgu, kaynak="openalex", analiz=True):
+    """Web arayüzü için: arar, (istenirse) analiz eder, sonucu sözlük döndürür."""
+    sonuc = {"soru": (sorgu or "").strip(), "kaynak": kaynak, "analiz": analiz,
+             "hata": "", "yayinlar": [], "celiskiler": None, "rapor_md": ""}
+    if not sonuc["soru"]:
+        sonuc["hata"] = "Lütfen bir araştırma sorusu yaz."
+        return sonuc
+    if kaynak not in KAYNAKLAR:
+        sonuc["hata"] = "Bilinmeyen kaynak seçildi."
+        return sonuc
+
+    # Paketler sadece burada gerekli, json modu etkilenmesin
+    if kaynak == "openalex":
+        from openalex import search_openalex as search
+    else:
+        from arxiv import search_arxiv as search
+    # Arama fonksiyonları hataları print eder; mesajı yakalayıp ekrana taşırız
+    yazilan = io.StringIO()
+    with contextlib.redirect_stdout(yazilan):
+        kayitlar = search(sonuc["soru"])
+    if not kayitlar:
+        mesaj = " ".join(yazilan.getvalue().split())
+        sonuc["hata"] = mesaj or f"{KAYNAKLAR[kaynak]} kaynağından kayıt gelmedi."
+        return sonuc
+
+    yayinlar = unique_publications(kayitlar)
+    celiski = None
+    if analiz:
+        # Web'de terminal yok: ilerleme mesajlarını yutarız
+        celiski = analiz_et(sonuc["soru"], yayinlar, ilerleme=lambda mesaj: None)
+
+    # Çelişkideki yayınlar listede kaçıncı sırada? (nesne kimliğiyle bul)
+    sira_of = {id(p): no for no, p in enumerate(yayinlar, start=1)}
+    for no, p in enumerate(yayinlar, start=1):
+        kanit = p.get("kanit") or {}
+        durum = kanit.get("durum", "analiz edilmedi")
+        sonuc["yayinlar"].append({
+            "no": no,
+            "baslik": p["title"],
+            "link": p["url"],
+            "doi": p["doi"],
+            "kaynaklar": p["sources"],
+            "cumleler": split_sentences(p.get("abstract", "")),
+            "durum": "DOĞRULANAMADI" if durum == "doğrulanamadı" else durum,
+            "bulgu": kanit.get("bulgu", ""),
+            "dayanak": kanit.get("gecerli", []),
+            "rakam_uyarisi": kanit.get("kanitsiz_sayilar", []),
+            "not": kanit.get("not", ""),
+        })
+    if celiski:
+        liste = []
+        for kayit in celiski["celiskiler"]:
+            a = celiski["uygun"][kayit["yayin_a"] - 1]
+            b = celiski["uygun"][kayit["yayin_b"] - 1]
+            liste.append({"a": sira_of[id(a)], "b": sira_of[id(b)],
+                          "aciklama": kayit["aciklama"]})
+        mesaj = celiski["mesaj"]
+        if celiski["durum"] == "tamam" and not liste:
+            mesaj = "Çelişen çalışma bulunamadı."
+        sonuc["celiskiler"] = {"durum": celiski["durum"], "mesaj": mesaj,
+                               "liste": liste, "atilan": celiski["atilan"]}
+    # İndirilebilir Markdown raporu da aynı veriden üretilir
+    sonuc["rapor_md"] = render_report(sonuc["soru"], yayinlar, analyzed=analiz, celiski=celiski)
+    return sonuc
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     # Varsayılan json: eski komut --source olmadan çalışsın
@@ -272,26 +368,7 @@ def main():
     # --analyze kapalıyken çelişki bölümü hiç yazılmaz
     celiski = None
     if args.analyze:
-        # analiz sadece burada import edilir (döngüsel import olmasın)
-        from analiz import bul_kanit, celiski_bul
-        # Maliyet ve süre için sadece ilk 5 yayın analiz edilir
-        # Sadece özeti olanlar sayılır; ilk ANALYZE_LIMIT tanesi seçilir
-        selected = [p for p in publications if p["abstract"]][:ANALYZE_LIMIT]
-        for number, publication in enumerate(selected, start=1):
-            print(f"Analiz {number}/{len(selected)}: {publication['title'][:60]}")
-            publication["kanit"] = bul_kanit(question, publication)
-        # Kalanlara model çağrılmaz, sadece nedenini yazan not düşülür
-        for publication in publications:
-            if "kanit" in publication:
-                continue
-            if not publication["abstract"]:
-                # Özet yoksa bul_kanit model çağırmadan "özet yok" döner
-                publication["kanit"] = bul_kanit(question, publication)
-            else:
-                publication["kanit"] = {"durum": "analiz edilmedi", "atilan": 0}
-        # Analiz sonuçları arasında çelişen bulguları ara
-        print("Çelişki aranıyor...")
-        celiski = celiski_bul(question, publications)
+        celiski = analiz_et(question, publications)
     report = render_report(question, publications, analyzed=args.analyze, celiski=celiski)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")

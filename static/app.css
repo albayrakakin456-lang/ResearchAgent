@@ -1,0 +1,106 @@
+:root {
+  --zemin: #f6f7f9;
+  --kart: #ffffff;
+  --yazi: #1d2330;
+  --soluk: #5b6475;
+  --cizgi: #d9dde5;
+  --vurgu: #2456c9;
+  --yesil: #1b7a43;   --yesil-zemin: #e4f4ea;
+  --kirmizi: #b3261e; --kirmizi-zemin: #fdeceb;
+  --turuncu: #8a5200; --turuncu-zemin: #fff1d6;
+  --gri-zemin: #eceef2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--zemin);
+  color: var(--yazi);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { margin: 0; font-size: 1.6rem; }
+h2 { margin: 32px 0 12px; font-size: 1.2rem; }
+h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.alt { color: var(--soluk); margin: 4px 0 0; }
+a { color: var(--vurgu); }
+
+/* Arama formu */
+.panel {
+  margin-top: 20px; padding: 16px;
+  background: var(--kart); border: 1px solid var(--cizgi); border-radius: 8px;
+}
+label { font-weight: 600; }
+input[type="text"] {
+  width: 100%; margin-top: 6px; padding: 10px 12px;
+  font: inherit; border: 1px solid var(--cizgi); border-radius: 6px;
+}
+input[type="text"]:focus-visible, button:focus-visible {
+  outline: 2px solid var(--vurgu); outline-offset: 2px;
+}
+small { display: block; margin-top: 4px; color: var(--soluk); }
+fieldset { margin: 14px 0 0; padding: 0; border: 0; }
+legend { padding: 0; font-weight: 600; }
+.secenek { display: inline-block; margin: 6px 16px 0 0; font-weight: 400; }
+.satir { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+button {
+  padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer;
+  color: #fff; background: var(--vurgu); border: 0; border-radius: 6px;
+}
+button:disabled { background: #98a3b8; cursor: wait; }
+#durumYazisi { color: var(--soluk); }
+
+/* Hata */
+.hata-kutusu {
+  margin-top: 16px; padding: 12px 16px; border-radius: 8px;
+  color: var(--kirmizi); background: var(--kirmizi-zemin); border: 1px solid #f1b8b4;
+}
+
+/* Yayın kartları */
+.kart {
+  margin-top: 12px; padding: 14px 16px;
+  background: var(--kart); border: 1px solid var(--cizgi); border-left-width: 5px;
+  border-radius: 8px;
+}
+.kart[data-durum="dogrulandi"] { border-left-color: var(--yesil); }
+.kart[data-durum="dogrulanamadi"] { border-left-color: var(--kirmizi); }
+.kart[data-durum="diger"] { border-left-color: var(--turuncu); }
+.kart.sade { padding: 8px 16px; margin-top: 8px; }
+.kart.sade .meta { margin-top: 0; }
+.kart-ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.meta { margin: 4px 0 0; font-size: 0.875rem; color: var(--soluk); overflow-wrap: anywhere; }
+.bulgu { margin: 10px 0 0; }
+.bos-not { margin: 10px 0 0; color: var(--soluk); }
+
+/* Durum rozetleri */
+.rozet {
+  flex: none; padding: 2px 10px; font-size: 0.8rem; font-weight: 700; white-space: nowrap;
+  border-radius: 999px; background: var(--gri-zemin); color: var(--soluk);
+}
+.rozet.dogrulandi { background: var(--yesil-zemin); color: var(--yesil); }
+.rozet.dogrulanamadi { background: var(--kirmizi-zemin); color: var(--kirmizi); }
+.rozet.diger { background: var(--turuncu-zemin); color: var(--turuncu); }
+
+/* Rakam uyarısı ve DOĞRULANAMADI açıklaması */
+.uyari {
+  margin: 10px 0 0; padding: 8px 12px; font-size: 0.925rem; border-radius: 6px;
+  color: var(--turuncu); background: var(--turuncu-zemin); border: 1px solid #f0cf8f;
+}
+.uyari.kirmizi { color: var(--kirmizi); background: var(--kirmizi-zemin); border-color: #f1b8b4; }
+
+/* Çelişki kartları */
+.celiski { border-left-color: var(--kirmizi); }
+.celiski-kolonlar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+.kolon { min-width: 0; padding: 10px 12px; background: var(--zemin); border-radius: 6px; }
+.kolon h3 { font-size: 0.95rem; }
+.aciklama { margin: 12px 0 0; font-weight: 600; }
+
+.not { margin-top: 28px; font-size: 0.875rem; color: var(--soluk); }
+
+@media (max-width: 640px) {
+  .celiski-kolonlar { grid-template-columns: 1fr; }
+  .kart-ust { flex-direction: column; }
+}
