@@ -1,7 +1,10 @@
 """arxiv.py testleri: LaTeX temizliği ve sorgu oluşturma. İnternet gerekmez."""
+import contextlib
+import io
 import unittest
+from unittest.mock import patch
 
-from arxiv import build_query, clean_latex
+from arxiv import build_query, clean_latex, search_arxiv
 
 
 class CleanLatexTest(unittest.TestCase):
@@ -41,6 +44,38 @@ class BuildQueryTest(unittest.TestCase):
     def test_tirnakli_ifade(self):
         self.assertEqual(build_query('"spaced repetition" students', "OR"),
                          'all:"spaced repetition" OR all:students')
+
+
+
+class SearchArxivTest(unittest.TestCase):
+    """Arama sırası: önce tam ifade. Gerçek istek atılmaz, _fetch sahte."""
+
+    def ara(self, sorgu, cevaplar):
+        """Her _fetch çağrısında sıradaki sahte cevabı verir, sorguları döndürür."""
+        with patch("arxiv._fetch", side_effect=cevaplar) as sahte, \
+                contextlib.redirect_stdout(io.StringIO()):
+            sonuc = search_arxiv(sorgu)
+        return sonuc, [cagri.args[0] for cagri in sahte.call_args_list]
+
+    def test_once_tam_ifade(self):
+        # "spaced" kelimesi tek başına aranınca "space" ile de eşleşiyordu
+        sonuc, sorgular = self.ara("spaced repetition", [[{"title": "T"}]])
+        self.assertEqual(sorgular, ['all:"spaced repetition"'])
+        self.assertEqual(len(sonuc), 1)
+
+    def test_tam_ifade_bos_donerse_kelimelerle(self):
+        _, sorgular = self.ara("spaced repetition", [[], [{"title": "T"}]])
+        self.assertEqual(sorgular, ['all:"spaced repetition"', "all:spaced AND all:repetition"])
+
+    def test_dort_kelimede_iki_kelimelik_tam_ifadeye_iner(self):
+        _, sorgular = self.ara("spaced repetition university students",
+                               [[], [], [], [{"title": "T"}]])
+        self.assertEqual(sorgular[-1], 'all:"spaced repetition"')
+
+    def test_hata_olunca_yeni_istek_atilmaz(self):
+        sonuc, sorgular = self.ara("spaced repetition", [None])
+        self.assertEqual(sonuc, [])
+        self.assertEqual(len(sorgular), 1)
 
 
 if __name__ == "__main__":

@@ -166,27 +166,43 @@ def parse_feed(xml_text):
 def search_arxiv(query, max_results=10):
     """Arama ifadesiyle arXiv'de arar, kayıt listesi döndürür.
 
-    Önce bütün terimlerin geçtiği makaleleri arar (AND). Sonuç çıkmazsa
-    sondaki terimleri birer birer bırakarak tekrar dener; ilk terimler
-    genelde konunun kendisidir ("spaced repetition university students"
-    → "spaced repetition university" → "spaced repetition"). En son çare
-    olarak terimlerden herhangi birini içerenleri arar (OR).
+    Önce sorguyu tam ifade olarak arar ("spaced repetition"), çünkü arXiv
+    kelimeleri köküne indirir: tek tek aranınca "spaced" "space" ile de
+    eşleşir. Sonuç çıkmazsa bütün terimleri (AND), sonra sondaki terimleri
+    birer birer bırakarak dener; ilk terimler genelde konunun kendisidir.
+    İki terime inince yine önce tam ifade denenir. En son çare olarak
+    terimlerden herhangi birini içerenleri arar (OR).
     """
     terms = query_terms(query)
     if not terms:
         print("Hata: arama ifadesi boş.")
         return []
 
-    records = _fetch(_join(terms, "AND"), max_results)
-    # Hata olduysa (None) yeni istek atma; sonuç yoksa terim azalt
-    count = len(terms) - 1
-    while records == [] and count >= 2:
-        print(f"Sonuç yok; ilk {count} kelimeyle aranıyor: {' '.join(terms[:count])}")
-        records = _fetch(_join(terms[:count], "AND"), max_results)
-        count -= 1
-    if records == [] and len(terms) > 1:
-        print("Sonuç yok; kelimelerden herhangi biriyle aranıyor (sonuçlar alakasız olabilir)...")
-        records = _fetch(_join(terms, "OR"), max_results)
+    # Denenecek sorgular, en dardan en genişe: (açıklama, sorgu)
+    denemeler = []
+    if len(terms) > 1:
+        denemeler.append(("tam ifade", _join([" ".join(terms)], "AND")))
+    denemeler.append(("bütün kelimeler", _join(terms, "AND")))
+    for count in range(len(terms) - 1, 1, -1):
+        if count == 2:
+            denemeler.append(("ilk 2 kelime, tam ifade", _join([" ".join(terms[:2])], "AND")))
+        denemeler.append((f"ilk {count} kelime", _join(terms[:count], "AND")))
+    if len(terms) > 1:
+        denemeler.append(("kelimelerden herhangi biri (sonuçlar alakasız olabilir)",
+                          _join(terms, "OR")))
+
+    records, denenen = [], set()
+    for sira, (aciklama, sorgu) in enumerate(denemeler):
+        # Aynı sorguyu iki kez atma (2 kelimelik sorguda tam ifade tekrar eder)
+        if sorgu in denenen:
+            continue
+        denenen.add(sorgu)
+        if sira > 0:
+            print(f"Sonuç yok; {aciklama} ile aranıyor...")
+        records = _fetch(sorgu, max_results)
+        # Hata olduysa (None) yeni istek atma; sonuç geldiyse dur
+        if records != []:
+            break
     if records is None:
         return []
     if not records:
