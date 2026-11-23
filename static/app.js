@@ -240,16 +240,20 @@ function ozetMetni(veri) {
 // Son gelen sonuç; "Markdown indir" bunu kullanır (yeni arama yapılmaz)
 let sonSonuc = null;
 
-// Analiz edilenlerin hepsi "ilgisiz" mi? (model hatası varsa bilemeyiz)
-function hepsiIlgisizMi(yayinlar) {
+// Analiz edilenler arasında soruyla ilgili (bulgusu olan) hiç yayın yok mu?
+// İlgisiz ya da model hatası fark etmez: ilgili yoksa kart gösterilmez.
+function hicIlgiliYokMu(yayinlar) {
   const analizEdilen = yayinlar.filter(
     (y) => y.durum !== "analiz edilmedi" && y.durum !== "özet yok");
-  return analizEdilen.length > 0 && analizEdilen.every((y) => y.durum === "ilgisiz");
+  return analizEdilen.length > 0 && !analizEdilen.some(
+    (y) => y.durum === "doğrulandı" || y.durum === "DOĞRULANAMADI");
 }
 
+const ILGILI_YOK_MESAJI =
+  "Soruyla ilgili yayın bulunamadı. Soruyu İngilizce ve daha açık yazmayı dene.";
+
 // Uyarı kutusu bir kez oluşturulur, özet satırının hemen altına konur
-const ilgisizUyari = el("p", "uyari",
-  "Soruyla ilgili yayın bulunamadı. Soruyu İngilizce ve daha açık yazmayı dene.");
+const ilgisizUyari = el("p", "uyari", ILGILI_YOK_MESAJI);
 ilgisizUyari.hidden = true;
 document.getElementById("sonucOzet").after(ilgisizUyari);
 
@@ -258,7 +262,11 @@ function sonucuGoster(veri) {
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
   document.getElementById("sonucOzet").textContent = ozetMetni(veri);
-  const hepsiIlgisiz = hepsiIlgisizMi(veri.yayinlar);
+  // Sunucu "araştırma sorusu değil" dediyse arama hiç yapılmadı, özet satırı da yok
+  const reddedildi = Boolean(veri.uyari);
+  document.getElementById("sonucOzet").hidden = reddedildi;
+  const hepsiIlgisiz = reddedildi || hicIlgiliYokMu(veri.yayinlar);
+  ilgisizUyari.textContent = veri.uyari || ILGILI_YOK_MESAJI;
   ilgisizUyari.hidden = !hepsiIlgisiz;
   // Hepsi ilgisizse kartlar, indirme düğmeleri ve alt not gösterilmez
   yayinlarKutusu.hidden = hepsiIlgisiz;

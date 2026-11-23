@@ -141,6 +141,38 @@ def bul_kanit(soru, yayin):
     return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, kanitsiz=kanitsiz)
 
 
+def arastirma_sorusu_mu(soru):
+    """Aramadan önce: bu girdi bilimsel bir araştırma sorusu mu?
+
+    (True, "") ya da (False, neden) döner. Model cevap veremezse
+    güvenli tarafta kalır ve geçirmez.
+    """
+    prompt = (
+        f"Girdi: {soru}\n\n"
+        "Görev: Bu girdi, bilimsel makalelerde aranabilecek bir araştırma "
+        "sorusu ya da araştırma konusu mu?\n"
+        "EVET örnekleri: 'aralıklı tekrar öğrencilerin hatırlamasını nasıl "
+        "etkiler', 'spaced repetition university students', 'kafeinin uyku "
+        "kalitesine etkisi'.\n"
+        "HAYIR örnekleri: selamlaşma ve sohbet ('naber', 'günün nasıl "
+        "gidiyor'), kişisel duygu/durum ('günüm çok kötüydü'), fıkra, öneri, "
+        "kişisel tavsiye, anlamsız kelimeler.\n"
+        "Emin değilsen HAYIR de.\n"
+        "Sadece şu JSON'u döndür:\n"
+        '{"arastirma_sorusu": true, "neden": "Türkçe kısa açıklama"}'
+    )
+    try:
+        cevap = ask(prompt, system=SYSTEM, temperature=0)
+    except LLMError as hata:
+        return False, f"Soru kontrol edilemedi: {hata}"
+    data = _json_oku(cevap)
+    if data is None:
+        return False, "Soru kontrol edilemedi (model yanıtı okunamadı)."
+    if data.get("arastirma_sorusu") is True:
+        return True, ""
+    return False, str(data.get("neden") or "").strip()
+
+
 def _celiski_sonuc(durum, mesaj, uygun=None, celiskiler=None, atilan=0, not_=""):
     """Çelişki aramasının her durumda aynı anahtarlı sonucu."""
     return {

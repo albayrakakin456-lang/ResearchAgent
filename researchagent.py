@@ -264,7 +264,7 @@ MIN_KELIME = 3
 def calistir(sorgu, kaynak="openalex", analiz=True):
     """Web arayüzü için: arar, (istenirse) analiz eder, sonucu sözlük döndürür."""
     sonuc = {"soru": (sorgu or "").strip(), "kaynak": kaynak, "analiz": analiz,
-             "hata": "", "yayinlar": [], "celiskiler": None, "rapor_md": ""}
+             "hata": "", "uyari": "", "yayinlar": [], "celiskiler": None, "rapor_md": ""}
     if not sonuc["soru"]:
         sonuc["hata"] = "Lütfen bir araştırma sorusu yaz."
         return sonuc
@@ -275,6 +275,16 @@ def calistir(sorgu, kaynak="openalex", analiz=True):
         return sonuc
     if kaynak not in KAYNAKLAR:
         sonuc["hata"] = "Bilinmeyen kaynak seçildi."
+        return sonuc
+    # Kapı kontrolü: araştırma sorusu değilse hiç arama yapma
+    from analiz import arastirma_sorusu_mu
+    uygun, neden = arastirma_sorusu_mu(sonuc["soru"])
+    if not uygun:
+        sonuc["uyari"] = ("Bu bir araştırma sorusu değil. ResearchAgent sadece "
+                          "bilimsel makale ve araştırma sorularına cevap verir. "
+                          "Örnek: spaced repetition university students")
+        if neden:
+            sonuc["uyari"] += f" ({neden})"
         return sonuc
 
     # Paketler sadece burada gerekli, json modu etkilenmesin
