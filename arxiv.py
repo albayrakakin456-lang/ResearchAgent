@@ -89,6 +89,8 @@ def clean_latex(text):
         bottom = bottom if len(bottom) == 1 else f"({bottom})"
         return f"{top}/{bottom}"
     text = re.sub(r"\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}", frac, text)
+    # Kaçışlı tek karakterler: \% → %, \& → &, \_ → _, \# → #
+    text = re.sub(r"\\([%&_#])", r"\1", text)
     # Bilinen semboller; bilinmeyen komutun sadece \ işareti silinir
     text = re.sub(r"\\([A-Za-z]+)", lambda m: LATEX_SYMBOLS.get(m.group(1), m.group(1)), text)
     # Üs ve alt indis: x^{ab} → x^(ab), x_{ab} → x_ab

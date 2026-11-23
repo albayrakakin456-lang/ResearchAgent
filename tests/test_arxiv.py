@@ -18,6 +18,11 @@ class CleanLatexTest(unittest.TestCase):
     def test_us(self):
         self.assertEqual(clean_latex(r"$(1 - ε^{3/2})^{n}$"), "(1 - ε^(3/2))^n")
 
+    def test_kacisli_karakterler(self):
+        # Gerçek bir arXiv özetinde "90.2\%" olarak kalıyordu
+        self.assertEqual(clean_latex(r"a 90.2\% success rate"), "a 90.2% success rate")
+        self.assertEqual(clean_latex(r"R\&D"), "R&D")
+
     def test_latexsiz_metin_degismez(self):
         metin = "Spaced repetition improved recall by 15%."
         self.assertEqual(clean_latex(metin), metin)
