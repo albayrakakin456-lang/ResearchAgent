@@ -240,11 +240,25 @@ function ozetMetni(veri) {
 // Son gelen sonuç; "Markdown indir" bunu kullanır (yeni arama yapılmaz)
 let sonSonuc = null;
 
+// Analiz edilenlerin hepsi "ilgisiz" mi? (model hatası varsa bilemeyiz)
+function hepsiIlgisizMi(yayinlar) {
+  const analizEdilen = yayinlar.filter(
+    (y) => y.durum !== "analiz edilmedi" && y.durum !== "özet yok");
+  return analizEdilen.length > 0 && analizEdilen.every((y) => y.durum === "ilgisiz");
+}
+
+// Uyarı kutusu bir kez oluşturulur, özet satırının hemen altına konur
+const ilgisizUyari = el("p", "uyari",
+  "Soruyla ilgili yayın bulunamadı. Soruyu İngilizce ve daha açık yazmayı dene.");
+ilgisizUyari.hidden = true;
+document.getElementById("sonucOzet").after(ilgisizUyari);
+
 function sonucuGoster(veri) {
   sonSonuc = veri;
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
   document.getElementById("sonucOzet").textContent = ozetMetni(veri);
+  ilgisizUyari.hidden = !hepsiIlgisizMi(veri.yayinlar);
 
   yayinlarKutusu.replaceChildren(...veri.yayinlar.map(yayinKarti));
 
