@@ -247,6 +247,21 @@ button.ikincil:hover { border-color: var(--vurgu); background: var(--vurgu-acik)
 .kart.sade h3 { font-size: 0.95rem; font-weight: 500; }
 .kart.sade .meta { margin-top: 2px; }
 
+/* İlgisiz bulunanlar: varsayılan kapalı, tıklayınca açılır */
+.ilgisiz-grup { margin-top: 22px; }
+.ilgisiz-grup summary {
+  display: flex; align-items: center; gap: 8px; padding: 6px 2px; cursor: pointer; list-style: none;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soluk);
+}
+.ilgisiz-grup summary::-webkit-details-marker { display: none; }
+.ilgisiz-grup summary::before {
+  content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); transition: transform 0.15s;
+}
+.ilgisiz-grup[open] summary::before { transform: rotate(45deg); }
+.ilgisiz-grup summary:hover { color: var(--vurgu); }
+.ilgisiz-grup summary:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; border-radius: 6px; }
+
 /* ---- Tıklayınca açılan özet cümleleri ---- */
 .tikla { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .tikla:hover { border-color: var(--vurgu); }

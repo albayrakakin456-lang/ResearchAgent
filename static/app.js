@@ -241,11 +241,25 @@ function ozetCipleri(veri) {
   return cipler;
 }
 
-// Analiz edilenler üstte; analiz edilmeyenler ayrı başlık altında sade liste
+// Bulgusu olanlar üstte; ilgisizler kapalı bir başlıkta; analiz edilmeyenler en altta
 function yayinListesi(yayinlar) {
-  const analizli = yayinlar.filter((y) => y.durum !== "analiz edilmedi");
+  const ilgisiz = yayinlar.filter((y) => y.durum === "ilgisiz");
+  const analizli = yayinlar.filter((y) => y.durum !== "analiz edilmedi" && y.durum !== "ilgisiz");
   const sade = yayinlar.filter((y) => y.durum === "analiz edilmedi");
   const ogeler = analizli.map(yayinKarti);
+  if (ilgisiz.length) {
+    // <details>: tarayıcının hazır aç/kapa öğesi, JavaScript gerektirmez
+    const grup = el("details", "ilgisiz-grup");
+    grup.append(el("summary", "", "İlgisiz bulundu (" + ilgisiz.length + ")"));
+    for (const y of ilgisiz) {
+      const kart = yayinKarti(y);
+      kart.classList.add("sade");
+      // "Bu yayın soruyla ilgisiz" cümlesi başlık zaten söylüyor
+      kart.querySelector(".bos-not")?.remove();
+      grup.append(kart);
+    }
+    ogeler.push(grup);
+  }
   if (sade.length) {
     ogeler.push(el("h3", "grup-baslik", "Diğer yayınlar · analiz edilmedi (" + sade.length + ")"));
     ogeler.push(...sade.map(yayinKarti));
