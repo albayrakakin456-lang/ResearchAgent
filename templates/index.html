@@ -4,45 +4,72 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ResearchAgent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
 <body>
+  <div class="arkaplan" aria-hidden="true"></div>
   <main>
-    <header>
-      <h1>ResearchAgent</h1>
-      <p class="alt">Makale ara, özetlerden bulguyu çıkar, dayanak cümlesini göster.</p>
+    <header class="ust">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M14 3v5h5"/><path d="M19 8v3"/>
+          <circle cx="16.5" cy="16.5" r="3.5"/><path d="m21 21-2-2"/>
+        </svg>
+      </span>
+      <div>
+        <h1>ResearchAgent</h1>
+        <p class="alt">Makale ara, özetlerden bulguyu çıkar, dayanak cümlesini göster.</p>
+      </div>
     </header>
 
-    <form id="aramaFormu" class="panel">
-      <label for="soru">Araştırma sorusu</label>
-      <input id="soru" name="soru" type="text" autocomplete="off" required
-             placeholder="spaced repetition university students">
-      <small>İngilizce yazarsan daha iyi sonuç gelir.</small>
-
-      <fieldset>
-        <legend>Kaynak</legend>
-        {% for anahtar, ad in kaynaklar.items() %}
-        <label class="secenek">
-          <input type="radio" name="kaynak" value="{{ anahtar }}" {% if loop.first %}checked{% endif %}>
-          {{ ad }}
-        </label>
-        {% endfor %}
-      </fieldset>
-
-      <div class="satir">
-        <button id="araDugme" type="submit">Ara</button>
-        <span id="durumYazisi" role="status" aria-live="polite"></span>
+    <form id="aramaFormu" class="arama-karti">
+      <label for="soru" class="etiket">Araştırma sorusu</label>
+      <div class="arama-satiri">
+        <div class="girdi-kutusu">
+          <svg class="girdi-simge" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+          </svg>
+          <input id="soru" name="soru" type="text" autocomplete="off" required
+                 placeholder="spaced repetition university students">
+        </div>
+        <button id="araDugme" type="submit"><span class="dugme-yazi">Ara</span></button>
       </div>
+      <div class="alt-satir">
+        <small>İngilizce yazarsan daha iyi sonuç gelir.</small>
+        <fieldset class="kaynak-secici">
+          <legend>Kaynak</legend>
+          {% for anahtar, ad in kaynaklar.items() %}
+          <label class="secenek">
+            <input type="radio" name="kaynak" value="{{ anahtar }}" {% if loop.first %}checked{% endif %}>
+            <span>{{ ad }}</span>
+          </label>
+          {% endfor %}
+        </fieldset>
+      </div>
+      <span id="durumYazisi" role="status" aria-live="polite"></span>
     </form>
 
     <div id="hata" class="hata-kutusu" role="alert" hidden></div>
 
+    <div id="yukleniyor" class="iskelet-liste" aria-hidden="true" hidden>
+      <div class="iskelet-kart"><span></span><span></span><span></span></div>
+      <div class="iskelet-kart"><span></span><span></span><span></span></div>
+      <div class="iskelet-kart"><span></span><span></span><span></span></div>
+    </div>
+
     <section id="sonuc" hidden>
-      <h2 id="sonucBaslik"></h2>
-      <p id="sonucOzet" class="alt"></p>
-      <div class="arac-cubugu">
-        <button type="button" id="pdfDugme" class="ikincil">PDF olarak kaydet</button>
-        <button type="button" id="mdDugme" class="ikincil">Markdown indir</button>
+      <div class="sonuc-ust">
+        <div class="sonuc-baslik-alani">
+          <h2 id="sonucBaslik"></h2>
+          <p id="sonucOzet" class="ozet-cipleri"></p>
+        </div>
+        <div class="arac-cubugu">
+          <button type="button" id="pdfDugme" class="ikincil">PDF olarak kaydet</button>
+          <button type="button" id="mdDugme" class="ikincil">Markdown indir</button>
+        </div>
       </div>
       <div id="yayinlar"></div>
       <section id="celiskiBolumu" hidden>

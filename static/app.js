@@ -230,11 +230,27 @@ function celiskiKarti(kayit, yayinlar, sira) {
   return kart;
 }
 
-function ozetMetni(veri) {
+// Özet satırı: "10 yayın" + her durum için renkli bir çip
+function ozetCipleri(veri) {
   const sayim = {};
   for (const y of veri.yayinlar) sayim[y.durum] = (sayim[y.durum] || 0) + 1;
-  const parcalar = Object.entries(sayim).map(([durum, adet]) => adet + " " + durumEtiketi(durum));
-  return veri.yayinlar.length + " yayın: " + parcalar.join(", ");
+  const cipler = [el("span", "cip toplam", veri.yayinlar.length + " yayın")];
+  for (const [durum, adet] of Object.entries(sayim)) {
+    cipler.push(el("span", "cip " + durumSinifi(durum), adet + " " + durumEtiketi(durum)));
+  }
+  return cipler;
+}
+
+// Analiz edilenler üstte; analiz edilmeyenler ayrı başlık altında sade liste
+function yayinListesi(yayinlar) {
+  const analizli = yayinlar.filter((y) => y.durum !== "analiz edilmedi");
+  const sade = yayinlar.filter((y) => y.durum === "analiz edilmedi");
+  const ogeler = analizli.map(yayinKarti);
+  if (sade.length) {
+    ogeler.push(el("h3", "grup-baslik", "Diğer yayınlar · analiz edilmedi (" + sade.length + ")"));
+    ogeler.push(...sade.map(yayinKarti));
+  }
+  return ogeler;
 }
 
 // Son gelen sonuç; "Markdown indir" bunu kullanır (yeni arama yapılmaz)
@@ -261,7 +277,7 @@ function sonucuGoster(veri) {
   sonSonuc = veri;
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
-  document.getElementById("sonucOzet").textContent = ozetMetni(veri);
+  document.getElementById("sonucOzet").replaceChildren(...ozetCipleri(veri));
   // Sunucu "araştırma sorusu değil" dediyse arama hiç yapılmadı, özet satırı da yok
   const reddedildi = Boolean(veri.uyari);
   document.getElementById("sonucOzet").hidden = reddedildi;
@@ -273,7 +289,7 @@ function sonucuGoster(veri) {
   sonucAlani.querySelector(".arac-cubugu").hidden = hepsiIlgisiz;
   sonucAlani.querySelector(".not").hidden = hepsiIlgisiz;
 
-  yayinlarKutusu.replaceChildren(...veri.yayinlar.map(yayinKarti));
+  yayinlarKutusu.replaceChildren(...yayinListesi(veri.yayinlar));
 
   celiskilerKutusu.replaceChildren();
   celiskiBolumu.hidden = !veri.celiskiler || hepsiIlgisiz;
@@ -319,7 +335,10 @@ form.addEventListener("submit", async (olay) => {
 
   // Arama sürerken düğme kilitli, bekleme yazısı görünür
   araDugme.disabled = true;
+  araDugme.setAttribute("aria-busy", "true");
   durumYazisi.textContent = "Aranıyor, lütfen bekle...";
+  // Sonuç gelene kadar yer tutucu iskelet kartlar
+  document.getElementById("yukleniyor").hidden = false;
   hataKutusu.hidden = true;
   sonucAlani.hidden = true;
 
@@ -340,6 +359,8 @@ form.addEventListener("submit", async (olay) => {
   } finally {
     // Ne olursa olsun düğme tekrar açılır
     araDugme.disabled = false;
+    araDugme.removeAttribute("aria-busy");
     durumYazisi.textContent = "";
+    document.getElementById("yukleniyor").hidden = true;
   }
 });
