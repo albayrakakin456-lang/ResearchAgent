@@ -177,6 +177,9 @@ def render_celiskiler(celiski):
     # Arama yapılamadıysa/yapılmadıysa nedenini yaz, bölümü bitir
     if celiski["durum"] != "tamam":
         lines.append(celiski["mesaj"])
+        # Model hatasıysa sebebi de yaz (örn. "İstek limiti doldu (429)")
+        if celiski.get("not"):
+            lines.append(f"Neden: {celiski['not']}")
         return lines
     if not celiski["celiskiler"]:
         lines.append("Çelişen çalışma bulunamadı.")
@@ -339,6 +342,9 @@ def calistir(sorgu, kaynak="openalex", analiz=True):
             liste.append({"a": sira_of[id(a)], "b": sira_of[id(b)],
                           "aciklama": kayit["aciklama"]})
         mesaj = celiski["mesaj"]
+        # Web'de de sebep görünsün
+        if celiski.get("not"):
+            mesaj += f" Neden: {celiski['not']}"
         if celiski["durum"] == "tamam" and not liste:
             mesaj = "Çelişen çalışma bulunamadı."
         sonuc["celiskiler"] = {"durum": celiski["durum"], "mesaj": mesaj,

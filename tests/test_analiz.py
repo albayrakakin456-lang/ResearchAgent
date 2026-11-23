@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from analiz import (_celiskileri_dogrula, _json_oku, _numaralari_dogrula,
-                    bul_kanit, sayi_kontrol)
+                    _sonuc, bul_kanit, celiski_bul, sayi_kontrol)
+from researchagent import render_celiskiler
 from llm import LLMError
 
 # Üç cümlelik örnek özet (yapay örnek veri, gerçek yayın değil)
@@ -129,6 +130,43 @@ class CeliskileriDogrulaTest(unittest.TestCase):
         gecerli, atilan = _celiskileri_dogrula(ham, 3)
         self.assertEqual(gecerli, [{"yayin_a": 1, "yayin_b": 2, "aciklama": "zıt sonuç"}])
         self.assertEqual(atilan, 5)
+
+
+
+def dogrulanmis(baslik, bulgu):
+    """celiski_bul'a verilecek, doğrulanmış bulgulu yapay yayın."""
+    return {"title": f"ÖRNEK VERİ: {baslik}", "url": "",
+            "kanit": _sonuc("doğrulandı", True, bulgu, [{"numara": 1, "cumle": "(örnek)"}])}
+
+
+class CeliskiSebebiTest(unittest.TestCase):
+    """Çelişki analizi başarısız olunca sebep raporda görünmeli."""
+
+    YAYINLAR = [dogrulanmis("A", "Tekrar başarıyı artırır."),
+                dogrulanmis("B", "Tekrar başarıyı etkilemez.")]
+
+    @patch("analiz.ask", side_effect=LLMError("İstek limiti doldu (429)."))
+    def test_model_hatasi_sebebi_raporda(self, sahte_ask):
+        sonuc = celiski_bul("soru", self.YAYINLAR)
+        self.assertEqual(sonuc["durum"], "yapılamadı")
+        self.assertIn("Neden: İstek limiti doldu (429).", render_celiskiler(sonuc))
+
+    @patch("analiz.ask", return_value="bu JSON değil")
+    def test_okunamayan_yanit_sebebi_raporda(self, sahte_ask):
+        sonuc = celiski_bul("soru", self.YAYINLAR)
+        self.assertIn("Neden: Model yanıtı okunamadı.", render_celiskiler(sonuc))
+
+    @patch("analiz.ask", return_value='{"celiskiler": [{"yayin_a": 1, "yayin_b": 2, '
+                                      '"aciklama": "zıt sonuç"}]}')
+    def test_basarili_celiski(self, sahte_ask):
+        sonuc = celiski_bul("soru", self.YAYINLAR)
+        self.assertEqual(sonuc["durum"], "tamam")
+        self.assertEqual(len(sonuc["celiskiler"]), 1)
+
+    @patch("analiz.ask")
+    def test_tek_yayinda_model_cagrilmaz(self, sahte_ask):
+        self.assertEqual(celiski_bul("soru", self.YAYINLAR[:1])["durum"], "aranamadı")
+        sahte_ask.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -274,7 +274,8 @@ def celiski_bul(soru, sonuclar):
     data = _json_oku(cevap)
     ham = data.get("celiskiler") if data else None
     if not isinstance(ham, list):
-        return _celiski_sonuc("yapılamadı", "Çelişki analizi yapılamadı.", uygun)
+        return _celiski_sonuc("yapılamadı", "Çelişki analizi yapılamadı.", uygun,
+                              not_="Model yanıtı okunamadı.")
     gecerli, atilan = _celiskileri_dogrula(ham, len(uygun))
     return _celiski_sonuc("tamam", "", uygun, gecerli, atilan)
 
