@@ -67,6 +67,75 @@ function uyariEklemeleri(kart, yayin) {
   if (yayin.not) kart.append(el("p", "uyari", yayin.not));
 }
 
+// ---- Parça 2: tıklayınca özet cümleleri ve dayanak vurgusu ----
+
+// Yayının tüm özet cümleleri; dayanak olanlar vurgulu. Başta gizli.
+function cumlePaneli(yayin) {
+  const panel = el("div", "cumle-paneli");
+  panel.hidden = true;
+  const dayanakNolari = new Set(yayin.dayanak.map((d) => d.numara));
+  const liste = el("ol", "cumleler");
+  yayin.cumleler.forEach((cumle, i) => {
+    const dayanakMi = dayanakNolari.has(i + 1);
+    const li = el("li", dayanakMi ? "dayanak" : "", cumle);
+    if (dayanakMi) li.title = "Dayanak cümle";
+    liste.append(li);
+  });
+  panel.append(liste);
+  return panel;
+}
+
+// Paneli aç/kapat; açılınca ilk dayanak cümleye kaydır
+function panelDegistir(panel, ac, kaydir = true) {
+  panel.hidden = ac === undefined ? !panel.hidden : !ac;
+  if (panel.hidden) return;
+  // Panelin kendi içinde ilk dayanak cümleyi ortaya getir (her panel için)
+  const ilk = panel.querySelector(".dayanak");
+  if (ilk) panel.scrollTop = ilk.offsetTop - (panel.clientHeight - ilk.offsetHeight) / 2;
+  // Sayfayı da panele kaydır (yan yana açılırken sadece ilkine)
+  if (kaydir) panel.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// İkincil düğme: metni açık/kapalı durumuna göre değişir
+function panelDugmesi(acikMetin, kapaliMetin) {
+  const d = el("button", "ikincil", kapaliMetin);
+  d.type = "button";
+  d.dataset.acik = acikMetin;
+  d.dataset.kapali = kapaliMetin;
+  return d;
+}
+
+// Tetikleyicileri (bulgu metni, düğme) panele bağlar; durum güncelleyiciyi döndürür
+function baglaPanel(tetikleyiciler, panel) {
+  const guncelle = () => {
+    for (const t of tetikleyiciler) {
+      t.setAttribute("aria-expanded", String(!panel.hidden));
+      if (t.dataset.acik) t.textContent = panel.hidden ? t.dataset.kapali : t.dataset.acik;
+    }
+  };
+  for (const t of tetikleyiciler) {
+    const tikla = () => { panelDegistir(panel); guncelle(); };
+    t.addEventListener("click", tikla);
+    // Bulgu metni <p> olduğu için klavye (Enter/Boşluk) desteğini biz ekleriz
+    if (t.tagName !== "BUTTON") {
+      t.addEventListener("keydown", (olay) => {
+        if (olay.key === "Enter" || olay.key === " ") { olay.preventDefault(); tikla(); }
+      });
+    }
+  }
+  guncelle();
+  return guncelle;
+}
+
+// Bulgu paragrafını tıklanabilir yapar (klavyeyle de odaklanır)
+function bulguEleman(yayin) {
+  const p = el("p", "bulgu tikla", yayin.bulgu);
+  p.tabIndex = 0;
+  p.setAttribute("role", "button");
+  p.title = "Özet cümlelerini göster / gizle";
+  return p;
+}
+
 function yayinKarti(yayin) {
   const kart = el("article", "kart");
   kart.dataset.durum = durumSinifi(yayin.durum);
@@ -77,8 +146,16 @@ function yayinKarti(yayin) {
   ust.append(sol, el("span", "rozet " + durumSinifi(yayin.durum), yayin.durum));
   kart.append(ust);
 
+  // Özet cümleleri varsa ve analiz yapıldıysa panel + düğme eklenir
+  const panelli = yayin.cumleler.length > 0 &&
+    yayin.durum !== "analiz edilmedi" && yayin.durum !== "özet yok";
+  const panel = panelli ? cumlePaneli(yayin) : null;
+  const tetikleyiciler = [];
+
   if (yayin.bulgu) {
-    kart.append(el("p", "bulgu", yayin.bulgu));
+    const bulgu = panelli ? bulguEleman(yayin) : el("p", "bulgu", yayin.bulgu);
+    if (panelli) tetikleyiciler.push(bulgu);
+    kart.append(bulgu);
   } else if (yayin.durum === "özet yok") {
     kart.append(el("p", "bos-not", "Özet yok, analiz yapılamadı."));
   } else if (yayin.durum === "analiz edilmedi") {
@@ -88,6 +165,15 @@ function yayinKarti(yayin) {
     kart.append(el("p", "bos-not", "Bu yayın soruyla ilgisiz bulundu."));
   }
   uyariEklemeleri(kart, yayin);
+
+  if (panel) {
+    // Dayanak varsa düğme "Dayanak cümleleri", yoksa düz "Özet cümleleri"
+    const ad = yayin.dayanak.length ? "Dayanak cümleleri" : "Özet cümleleri";
+    const dugme = panelDugmesi(ad + " ▲ gizle", ad + " ▼ göster");
+    tetikleyiciler.push(dugme);
+    kart.append(dugme, panel);
+    baglaPanel(tetikleyiciler, panel);
+  }
   return kart;
 }
 
@@ -95,13 +181,29 @@ function celiskiKarti(kayit, yayinlar, sira) {
   const kart = el("article", "kart celiski");
   kart.append(el("h3", "", "Çelişki " + sira));
   const kolonlar = el("div", "celiski-kolonlar");
+  const paneller = [];
+  const guncelleyiciler = [];
   for (const no of [kayit.a, kayit.b]) {
     const yayin = yayinlar.find((y) => y.no === no);
     const kolon = el("div", "kolon");
-    kolon.append(baslikEleman(yayin), el("p", "bulgu", yayin.bulgu));
+    const panel = cumlePaneli(yayin);
+    const bulgu = bulguEleman(yayin);
+    kolon.append(baslikEleman(yayin), bulgu, panel);
     kolonlar.append(kolon);
+    paneller.push(panel);
+    // Kendi bulgusuna tıklayınca sadece o yayının paneli açılır
+    guncelleyiciler.push(baglaPanel([bulgu], panel));
   }
-  kart.append(kolonlar);
+  // Tek düğme iki panelin dayanaklarını yan yana açar/kapatır
+  const dugme = panelDugmesi("Dayanak cümlelerini gizle ▲", "İki yayının dayanak cümlelerini yan yana göster ▼");
+  dugme.addEventListener("click", () => {
+    const ac = paneller.some((p) => p.hidden);
+    // Ekran sadece ilk panele kayar; ikincisi yanında zaten görünür
+    paneller.forEach((p, i) => panelDegistir(p, ac, i === 0));
+    guncelleyiciler.forEach((g) => g());
+    dugme.textContent = ac ? dugme.dataset.acik : dugme.dataset.kapali;
+  });
+  kart.append(kolonlar, dugme);
   if (kayit.aciklama) kart.append(el("p", "aciklama", kayit.aciklama));
   return kart;
 }

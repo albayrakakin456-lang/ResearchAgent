@@ -84,6 +84,25 @@ button:disabled { background: #98a3b8; cursor: wait; }
 .rozet.dogrulanamadi { background: var(--kirmizi-zemin); color: var(--kirmizi); }
 .rozet.diger { background: var(--turuncu-zemin); color: var(--turuncu); }
 
+/* Parça 2: tıklayınca özet cümleleri */
+.tikla { cursor: pointer; text-decoration: underline dotted var(--cizgi); text-underline-offset: 4px; }
+.tikla:hover { background: #eef3ff; }
+.tikla:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+button.ikincil {
+  margin-top: 10px; padding: 5px 12px; font-size: 0.875rem;
+  color: var(--vurgu); background: transparent; border: 1px solid var(--vurgu);
+}
+button.ikincil:hover { background: #eef3ff; }
+.cumle-paneli {
+  position: relative; /* offsetTop bu panele göre hesaplansın */
+  margin-top: 10px; padding: 8px 12px 8px 4px; max-height: 20rem; overflow: auto;
+  background: var(--zemin); border: 1px solid var(--cizgi); border-radius: 6px;
+}
+.cumleler { margin: 0; padding-left: 2rem; font-size: 0.925rem; }
+.cumleler li { margin: 2px 0; padding: 3px 6px; border-radius: 4px; }
+.cumleler li.dayanak { background: #fff2a8; box-shadow: inset 3px 0 0 #d9a400; font-weight: 600; }
+.celiski .cumle-paneli { max-height: 22rem; }
+
 /* Rakam uyarısı ve DOĞRULANAMADI açıklaması */
 .uyari {
   margin: 10px 0 0; padding: 8px 12px; font-size: 0.925rem; border-radius: 6px;
