@@ -12,6 +12,8 @@
 }
 
 * { box-sizing: border-box; }
+/* hidden özelliği, display: flex gibi kurallara rağmen her zaman gizlesin */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;

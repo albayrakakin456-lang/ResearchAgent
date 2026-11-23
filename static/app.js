@@ -258,12 +258,17 @@ function sonucuGoster(veri) {
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
   document.getElementById("sonucOzet").textContent = ozetMetni(veri);
-  ilgisizUyari.hidden = !hepsiIlgisizMi(veri.yayinlar);
+  const hepsiIlgisiz = hepsiIlgisizMi(veri.yayinlar);
+  ilgisizUyari.hidden = !hepsiIlgisiz;
+  // Hepsi ilgisizse kartlar, indirme düğmeleri ve alt not gösterilmez
+  yayinlarKutusu.hidden = hepsiIlgisiz;
+  sonucAlani.querySelector(".arac-cubugu").hidden = hepsiIlgisiz;
+  sonucAlani.querySelector(".not").hidden = hepsiIlgisiz;
 
   yayinlarKutusu.replaceChildren(...veri.yayinlar.map(yayinKarti));
 
   celiskilerKutusu.replaceChildren();
-  celiskiBolumu.hidden = !veri.celiskiler;
+  celiskiBolumu.hidden = !veri.celiskiler || hepsiIlgisiz;
   if (veri.celiskiler) {
     if (veri.celiskiler.liste.length === 0) {
       celiskilerKutusu.append(el("p", "bos-not", veri.celiskiler.mesaj));
