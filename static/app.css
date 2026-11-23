@@ -176,6 +176,7 @@ small { color: var(--soluk); font-size: 0.8125rem; }
 #sonuc { margin-top: 36px; }
 .sonuc-ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .sonuc-baslik-alani { min-width: 0; flex: 1; }
+.arama-ifadesi { margin: 4px 0 0; font-size: 0.875rem; color: var(--soluk); }
 .ozet-cipleri { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
 .cip {
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;

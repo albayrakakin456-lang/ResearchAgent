@@ -291,6 +291,11 @@ function sonucuGoster(veri) {
   sonSonuc = veri;
   sonucAlani.hidden = false;
   document.getElementById("sonucBaslik").textContent = "Sonuçlar: " + veri.soru;
+  // Soru Türkçe ise makale veritabanlarında aranan İngilizce ifadeyi göster
+  const ifade = document.getElementById("aramaIfadesi");
+  const ifadeFarkli = veri.arama_ifadesi && veri.arama_ifadesi.toLowerCase() !== veri.soru.toLowerCase();
+  ifade.textContent = ifadeFarkli ? "Aranan ifade: " + veri.arama_ifadesi : "";
+  ifade.hidden = !ifadeFarkli;
   document.getElementById("sonucOzet").replaceChildren(...ozetCipleri(veri));
   // Sunucu "araştırma sorusu değil" dediyse arama hiç yapılmadı, özet satırı da yok
   const reddedildi = Boolean(veri.uyari);

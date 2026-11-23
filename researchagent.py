@@ -264,7 +264,8 @@ MIN_KELIME = 3
 def calistir(sorgu, kaynak="openalex", analiz=True):
     """Web arayüzü için: arar, (istenirse) analiz eder, sonucu sözlük döndürür."""
     sonuc = {"soru": (sorgu or "").strip(), "kaynak": kaynak, "analiz": analiz,
-             "hata": "", "uyari": "", "yayinlar": [], "celiskiler": None, "rapor_md": ""}
+             "hata": "", "uyari": "", "arama_ifadesi": "",
+             "yayinlar": [], "celiskiler": None, "rapor_md": ""}
     if not sonuc["soru"]:
         sonuc["hata"] = "Lütfen bir araştırma sorusu yaz."
         return sonuc
@@ -277,15 +278,18 @@ def calistir(sorgu, kaynak="openalex", analiz=True):
         sonuc["hata"] = "Bilinmeyen kaynak seçildi."
         return sonuc
     # Kapı kontrolü: araştırma sorusu değilse hiç arama yapma
-    from analiz import arastirma_sorusu_mu
-    uygun, neden = arastirma_sorusu_mu(sonuc["soru"])
-    if not uygun:
+    from analiz import soru_kontrol_et
+    kontrol = soru_kontrol_et(sonuc["soru"])
+    if not kontrol["uygun"]:
         sonuc["uyari"] = ("Bu bir araştırma sorusu değil. ResearchAgent sadece "
                           "bilimsel makale ve araştırma sorularına cevap verir. "
                           "Örnek: spaced repetition university students")
-        if neden:
-            sonuc["uyari"] += f" ({neden})"
+        if kontrol["neden"]:
+            sonuc["uyari"] += f" ({kontrol['neden']})"
         return sonuc
+    # Makale veritabanları İngilizce: Türkçe soruyu İngilizce ifadeyle ara
+    arama = kontrol["arama_ifadesi"] or sonuc["soru"]
+    sonuc["arama_ifadesi"] = arama
 
     # Paketler sadece burada gerekli, json modu etkilenmesin
     if kaynak == "openalex":
@@ -295,7 +299,7 @@ def calistir(sorgu, kaynak="openalex", analiz=True):
     # Arama fonksiyonları hataları print eder; mesajı yakalayıp ekrana taşırız
     yazilan = io.StringIO()
     with contextlib.redirect_stdout(yazilan):
-        kayitlar = search(sonuc["soru"])
+        kayitlar = search(arama)
     if not kayitlar:
         mesaj = " ".join(yazilan.getvalue().split())
         sonuc["hata"] = mesaj or f"{KAYNAKLAR[kaynak]} kaynağından kayıt gelmedi."

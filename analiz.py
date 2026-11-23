@@ -141,15 +141,15 @@ def bul_kanit(soru, yayin):
     return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, kanitsiz=kanitsiz)
 
 
-def arastirma_sorusu_mu(soru):
-    """Aramadan önce: bu girdi bilimsel bir araştırma sorusu mu?
+def soru_kontrol_et(soru):
+    """Aramadan önce tek model çağrısı: araştırma sorusu mu + İngilizce arama ifadesi.
 
-    (True, "") ya da (False, neden) döner. Model cevap veremezse
-    güvenli tarafta kalır ve geçirmez.
+    {"uygun": bool, "neden": str, "arama_ifadesi": str} döner. Model cevap
+    veremezse güvenli tarafta kalır ve geçirmez.
     """
     prompt = (
         f"Girdi: {soru}\n\n"
-        "Görev: Bu girdi, bilimsel makalelerde aranabilecek bir araştırma "
+        "Görev 1: Bu girdi, bilimsel makalelerde aranabilecek bir araştırma "
         "sorusu ya da araştırma konusu mu?\n"
         "EVET örnekleri: 'aralıklı tekrar öğrencilerin hatırlamasını nasıl "
         "etkiler', 'spaced repetition university students', 'kafeinin uyku "
@@ -158,19 +158,38 @@ def arastirma_sorusu_mu(soru):
         "gidiyor'), kişisel duygu/durum ('günüm çok kötüydü'), fıkra, öneri, "
         "kişisel tavsiye, anlamsız kelimeler.\n"
         "Emin değilsen HAYIR de.\n"
+        "Görev 2: Evet ise, makale veritabanlarında (OpenAlex, arXiv) "
+        "aratmak için İngilizce bir \"arama_ifadesi\" yaz: 3-6 anahtar "
+        "kelime, soru cümlesi değil. Girdi zaten İngilizceyse anlamını "
+        "koruyarak aynen kullan. HAYIR ise boş bırak.\n"
         "Sadece şu JSON'u döndür:\n"
-        '{"arastirma_sorusu": true, "neden": "Türkçe kısa açıklama"}'
+        '{"arastirma_sorusu": true, "neden": "Türkçe kısa açıklama", '
+        '"arama_ifadesi": "artificial intelligence academic performance"}'
     )
     try:
         cevap = ask(prompt, system=SYSTEM, temperature=0)
     except LLMError as hata:
-        return False, f"Soru kontrol edilemedi: {hata}"
+        return {"uygun": False, "neden": f"Soru kontrol edilemedi: {hata}",
+                "arama_ifadesi": ""}
     data = _json_oku(cevap)
     if data is None:
-        return False, "Soru kontrol edilemedi (model yanıtı okunamadı)."
+        return {"uygun": False, "arama_ifadesi": "",
+                "neden": "Soru kontrol edilemedi (model yanıtı okunamadı)."}
+    neden = str(data.get("neden") or "").strip()
     if data.get("arastirma_sorusu") is True:
-        return True, ""
-    return False, str(data.get("neden") or "").strip()
+        # Boş/uzun ifadeyi kabul etme; çağıran orijinal soruya döner
+        ifade = " ".join(str(data.get("arama_ifadesi") or "").split())
+        return {"uygun": True, "neden": "", "arama_ifadesi": ifade[:120]}
+    return {"uygun": False, "neden": neden, "arama_ifadesi": ""}
+
+
+def arastirma_sorusu_mu(soru):
+    """Aramadan önce: bu girdi bilimsel bir araştırma sorusu mu?
+
+    (True, "") ya da (False, neden) döner. (Eski arayüz; soru_kontrol_et'e dayanır.)
+    """
+    kontrol = soru_kontrol_et(soru)
+    return kontrol["uygun"], kontrol["neden"]
 
 
 def _celiski_sonuc(durum, mesaj, uygun=None, celiskiler=None, atilan=0, not_=""):
