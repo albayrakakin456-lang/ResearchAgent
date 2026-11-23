@@ -110,3 +110,36 @@ Kaynak: İSTÜN kütüphane sitesi, [Abone Veritabanları](https://library.istun
 3. Proje için sınırlı, yazılı izin alınabilecek bir süreç veya muhatap kişi var mı?
 
 **Görüşme sonucu:** (salıdan sonra buraya yazılacak)
+
+## 24 Kasım: testler, düzeltmeler, elle test
+
+### Otomatik testler (`tests/`)
+
+`py -m unittest discover tests` → 50 test, hepsi geçiyor. İnternet, API anahtarı ya da model gerektirmiyor; modeli çağıran yerlerde (`analiz.ask`, `analiz.soru_kontrol_et`, `arxiv._fetch`) `unittest.mock.patch` ile sahte cevap veriliyor.
+
+- `test_researchagent.py`: `unique_publications` (DOI yazımları, DOI'siz eşleşme, `None` değerler), `split_sentences` (et al., ondalık sayı, tırnakla biten cümle), `calistir` (kısa girdi ve "araştırma sorusu değil" durumunda model/arama çağrılmıyor).
+- `test_analiz.py`: `sayi_kontrol`, `_numaralari_dogrula`, `_json_oku`, `bul_kanit` (doğrulandı / doğrulanamadı / yanıt okunamadı / ilgisiz / model hatası / özet yok), `_celiskileri_dogrula`, `celiski_bul`.
+- `test_arxiv.py`: `clean_latex`, `build_query`, `search_arxiv` arama sırası.
+
+Testlerin hata yakaladığını kontrol etmek için koda bilerek hata ekledim (DOI öneki, rakam eşleşmesi); ilgili testler kırmızı yandı.
+
+### Düzeltilen hatalar (her biri ayrı commit, kendi testiyle)
+
+1. **`split_sentences` "Asymp. Sig." ifadesini bölüyordu** (`researchagent.py`, kısaltma listesi). Endonezce bir özette "Asymp." / "Sig." / "(2-tailed)…" üç ayrı cümle oluyordu; model öznesi olmayan parçayı dayanak seçmişti. `Asymp` ve `Sig` kısaltma listesine eklendi. Düzeltmeden sonra model düzgün İngilizce cümleleri seçti.
+2. **`clean_latex` kaçışlı karakterleri temizlemiyordu** (`arxiv.py`). LECTOR özetinde `90.2\%` kalıyordu. `\%`, `\&`, `\_`, `\#` artık düz karaktere çevriliyor.
+3. **Çelişki analizi başarısız olunca sebebi görünmüyordu** (`researchagent.py` `render_celiskiler` ve `calistir`, `analiz.py` `celiski_bul`). Rapor sadece "Çelişki analizi yapılamadı" diyordu. Artık "Neden: İstek limiti doldu (429)…" ya da "Neden: Model yanıtı okunamadı." satırı raporda ve web'de görünüyor. Fonksiyon adları ve parametreleri değişmedi.
+4. **arXiv'de "spaced" kelimesi "space" ile eşleşiyordu** (`arxiv.py` `search_arxiv`). arXiv kelimeleri köküne indirdiği için "spaced repetition" aramasında sonsuz evren, string algoritması gibi alakasız makaleler geliyordu. Artık önce tam ifade aranıyor (`all:"spaced repetition"`), sonuç yoksa eski kademeli arama devam ediyor. Düzeltmeden sonra 10 sonucun hepsi konuyla ilgili.
+
+### Elle test sonuçları
+
+- Demo JSON: "Benzersiz yayın kaydı 7", doğru.
+- OpenAlex + `--analyze`: 10 yayın, ilk 5'i analiz edildi; Pakistan çalışmasında bulgudaki 27.93, 30.8, 0.8 dayanak cümlede birebir var. Çelişki adımı 429'a takıldı ve sebep raporda göründü.
+- arXiv: 10 sonucun hepsi aralıklı tekrarla ilgili, LaTeX kalıntısı yok.
+- Web arayüzü (`py app.py`): "naber" → kırmızı "en az 3 kelime"; "günüm çok kötüydü" → sadece sarı "araştırma sorusu değil" mesajı, kaynak yok; gerçek soru → kartlar, "dayanak doğrulandı" rozeti, "Dayanak cümleleri" düğmesinde sarı vurgu, model hatası kartında 429 mesajı, PDF olarak kaydet ve Markdown indir çalışıyor.
+
+### Akın için öneriler (düzeltmedim)
+
+- **Groq 429:** 5 analiz + çelişki (web'de + soru kontrolü) art arda yapılınca ücretsiz dakikalık limit doluyor. Web'de 4. yayın, komut satırında çelişki adımı "model hatası" oldu. Öneri: `llm.ask` içinde 429 gelince birkaç saniye bekleyip bir kez tekrar denemek.
+- **"resp." kısaltması** da cümleyi bölüyor ("(resp. 90%)"). Aynı türden; `ABBREVIATION` listesine eklenebilir.
+- **Boşluksuz cümleler:** Bazı OpenAlex özetlerinde nokta sonrası boşluk yok ("acquisition.HLR combines"), bütün özet tek cümle oluyor. Veriden kaynaklı; düzeltmek "e.g." gibi yazımları bozabileceği için dokunmadım.
+- **`.env.example` uyarısı:** Kurulumda anahtarlar yanlışlıkla `.env.example`'a yazılabiliyor (bende oldu, commit'lenmeden fark edildi). README'ye uyarı ekledim.
