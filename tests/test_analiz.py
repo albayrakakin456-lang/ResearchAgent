@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from analiz import (_celiskileri_dogrula, _json_oku, _numaralari_dogrula,
-                    _prompt, _sonuc, bul_kanit, celiski_bul, literatur_kontrol,
+                    _celiski_prompt, _prompt, _sonuc, bul_kanit, celiski_bul, literatur_kontrol,
                     sayi_kontrol)
 from researchagent import render_celiskiler
 from llm import LLMError
@@ -201,6 +201,12 @@ class CeliskiSebebiTest(unittest.TestCase):
         sonuc = celiski_bul("soru", self.YAYINLAR)
         self.assertEqual(sonuc["durum"], "tamam")
         self.assertEqual(len(sonuc["celiskiler"]), 1)
+
+    def test_prompt_etkisiz_sonucu_celiski_sayar(self):
+        # Uyku testinde "etkilemedi" ile "olumsuz etkiler" çelişkisi kaçmıştı
+        metin = _celiski_prompt("soru", self.YAYINLAR)
+        self.assertIn("etki bulamamışsa", metin)
+        self.assertIn("iki grubu da belirt", metin)
 
     @patch("analiz.ask")
     def test_tek_yayinda_model_cagrilmaz(self, sahte_ask):
