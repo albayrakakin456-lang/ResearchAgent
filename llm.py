@@ -11,6 +11,8 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/chat"
 # Her istek için en çok 120 sn bekle
 TIMEOUT = 120
+# 429 (istek limiti) gelince bir kez tekrar denemeden önce en çok bu kadar bekle
+LIMIT_BEKLEME_UST = 20
 
 
 class LLMError(Exception):
@@ -26,7 +28,17 @@ def _messages(prompt, system):
     return messages
 
 
-def _post(url, payload, headers=None):
+def _limit_beklemesi(response):
+    """429 sonrası kaç saniye beklenmeli? Sunucu söylüyorsa onu, yoksa 5 sn."""
+    try:
+        sure = float(response.headers.get("retry-after", 5))
+    except (TypeError, ValueError):
+        sure = 5
+    # Çok uzun beklemeyelim; kullanıcı ekranda bekliyor
+    return max(1, min(sure, LIMIT_BEKLEME_UST))
+
+
+def _post(url, payload, headers=None, tekrar_dene=True):
     """İstek atar; ağ ve HTTP hatalarını Türkçe mesaja çevirir."""
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)
@@ -40,6 +52,10 @@ def _post(url, payload, headers=None):
     code = response.status_code
     if code == 404:
         raise LLMError("Model bulunamadı (404). Model adını .env'de kontrol et.")
+    if code == 429 and tekrar_dene:
+        # Ücretsiz katmanın dakikalık limiti: biraz bekleyip BİR kez daha dene
+        time.sleep(_limit_beklemesi(response))
+        return _post(url, payload, headers, tekrar_dene=False)
     if code == 429:
         raise LLMError("İstek limiti doldu (429). Biraz bekleyip tekrar dene.")
     if code in (401, 403):
