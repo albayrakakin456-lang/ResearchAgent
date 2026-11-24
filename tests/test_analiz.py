@@ -207,6 +207,8 @@ class CeliskiSebebiTest(unittest.TestCase):
         metin = _celiski_prompt("soru", self.YAYINLAR)
         self.assertIn("etki bulamamışsa", metin)
         self.assertIn("iki grubu da belirt", metin)
+        # Aynı yöndeki iki kötüleşme çelişki sayılmamalı (ikinci web testi)
+        self.assertIn("ANLAMA göre", metin)
 
     @patch("analiz.ask")
     def test_tek_yayinda_model_cagrilmaz(self, sahte_ask):
