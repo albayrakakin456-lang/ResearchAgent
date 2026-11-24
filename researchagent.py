@@ -144,6 +144,9 @@ def render_kanit(kanit):
         sayi_uyari = [f"  - Uyarı: Bulgudaki şu rakamlar dayanak cümlelerde yok: {sayilar}"]
     if durum == "doğrulandı":
         lines = [f"  - **Bulgu:** {kanit['bulgu']}"] + sayi_uyari
+        # Örn. dayanak bir literatür alıntısı olabilir uyarısı
+        if kanit.get("not"):
+            lines.append(f"  - {kanit['not']}")
         for item in kanit["gecerli"]:
             lines.append(f"  - **Dayanak ({item['numara']}. cümle):** {item['cumle']}")
     elif durum == "doğrulanamadı":

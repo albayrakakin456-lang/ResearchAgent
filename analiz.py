@@ -32,6 +32,26 @@ def _sayilar(text):
     return [sayi.replace(",", ".") for sayi in found]
 
 
+# Başka çalışmaları aktaran (yayının kendi sonucu olmayan) cümle kalıpları
+LITERATUR_KALIPLARI = (
+    "has been shown", "have been shown", "has been reported", "have been reported",
+    "has been suggested", "have been suggested", "previous stud", "prior stud",
+    "earlier stud", "previous research", "prior research", "past research",
+    "studies have", "research has", "research suggests", "literature",
+    "it is well known", "it is widely",
+)
+
+
+def literatur_kontrol(gecerli):
+    """Dayanak cümlelerinden literatür alıntısına benzeyenlerin numaraları.
+
+    Örn. "X has been shown to increase Y" makalenin kendi bulgusu değil,
+    önceki çalışmalardan bir alıntıdır. Model bunu bulgu sanabiliyor.
+    """
+    return [g["numara"] for g in gecerli
+            if any(kalip in g["cumle"].casefold() for kalip in LITERATUR_KALIPLARI)]
+
+
 def sayi_kontrol(bulgu, cumleler):
     """Bulgudaki sayılardan dayanak cümlelerde olmayanları döndürür."""
     # Dayanak cümlelerdeki sayılar bir küme (tekrarsız liste) olur
@@ -63,6 +83,10 @@ def _prompt(soru, yayin, cumleler):
         "- Dayanak olarak SADECE bulguyu doğrudan söyleyen sonuç ve "
         "çıkarım cümlelerini seç.\n"
         "- Yöntem, katılımcı, arka plan ve amaç cümlelerini SEÇME.\n"
+        "- Başka çalışmaları aktaran cümleleri (\"has been shown\", "
+        "\"previous studies\", \"studies have\" gibi) SEÇME; bunlar bu "
+        "yayının bulgusu değildir.\n"
+        "- Bulguya dayanak cümlelerde geçmeyen bir kavram ya da sonuç ekleme.\n"
         "- En fazla 2 cümle seç.\n"
         "- Aynı bilgi iki dilde varsa sadece birini seç, İngilizce olanı "
         "tercih et.\n"
@@ -138,7 +162,14 @@ def bul_kanit(soru, yayin):
                       kanitsiz=sayi_kontrol(bulgu, []))
     # Bulgudaki sayılar seçilen dayanak cümlelerde var mı?
     kanitsiz = sayi_kontrol(bulgu, [g["cumle"] for g in gecerli])
-    return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, kanitsiz=kanitsiz)
+    # Dayanak başka çalışmalardan alıntıysa uyar (web'de ve raporda görünür)
+    alinti = literatur_kontrol(gecerli)
+    not_ = ""
+    if alinti:
+        numaralar = ", ".join(f"{n}." for n in alinti)
+        not_ = (f"Uyarı: {numaralar} dayanak cümlesi önceki çalışmalardan alıntı olabilir; "
+                "bu yayının kendi bulgusu olmayabilir.")
+    return _sonuc("doğrulandı", True, bulgu, gecerli, atilan, not_=not_, kanitsiz=kanitsiz)
 
 
 def soru_kontrol_et(soru):

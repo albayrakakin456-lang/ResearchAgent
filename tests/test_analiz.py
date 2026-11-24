@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from analiz import (_celiskileri_dogrula, _json_oku, _numaralari_dogrula,
-                    _sonuc, bul_kanit, celiski_bul, sayi_kontrol)
+                    _prompt, _sonuc, bul_kanit, celiski_bul, literatur_kontrol,
+                    sayi_kontrol)
 from researchagent import render_celiskiler
 from llm import LLMError
 
@@ -42,6 +43,35 @@ class SayiKontrolTest(unittest.TestCase):
 
     def test_tekrar_eden_rakam_bir_kez(self):
         self.assertEqual(sayi_kontrol("15, yine 15", []), ["15"])
+
+
+class LiteraturKontrolTest(unittest.TestCase):
+    """Dayanak, başka çalışmalardan alıntı olan bir cümleyse işaretlenmeli."""
+
+    def test_alinti_cumlesi_isaretlenir(self):
+        # Web testinde gerçekten bulgu diye sunulan cümle
+        gecerli = [{"numara": 4, "cumle": "Excessive social media use has been shown to "
+                    "increase social anxiety due to self-comparison."}]
+        self.assertEqual(literatur_kontrol(gecerli), [4])
+
+    def test_kendi_bulgusu_isaretlenmez(self):
+        # Gerçek testlerde doğru seçilmiş dayanak cümleleri
+        gecerli = [
+            {"numara": 12, "cumle": "The mean score of the pretest for the intervention group "
+             "was 27.93 ± 4.53, and that of the posttest was 30.8 ± 4.56."},
+            {"numara": 13, "cumle": "The intervention showed a significant effect size of 0.8."},
+            {"numara": 7, "cumle": "The impact of sleep deprivation before learning was "
+             "associated with Hedges' g = 0.621, 95% CI [0.473, 0.769]."},
+        ]
+        self.assertEqual(literatur_kontrol(gecerli), [])
+
+    def test_buyuk_harf_fark_etmez(self):
+        gecerli = [{"numara": 1, "cumle": "Previous studies reported mixed effects."}]
+        self.assertEqual(literatur_kontrol(gecerli), [1])
+
+    def test_prompt_kurali_var(self):
+        metin = _prompt("soru", {"title": "T"}, ["Bir cümle."])
+        self.assertIn("has been shown", metin)
 
 
 class NumaralariDogrulaTest(unittest.TestCase):
@@ -93,6 +123,15 @@ class BulKanitTest(unittest.TestCase):
         self.assertEqual(sonuc["atilan"], 3)
         # Dayanak yoksa bulgudaki rakam kanıtsız sayılır
         self.assertEqual(sonuc["kanitsiz_sayilar"], ["40"])
+
+    @patch("analiz.ask", return_value='{"ilgili": true, "bulgu": "Çalışmak başarıyı artırır.", '
+                                      '"cumle_numaralari": [1]}')
+    def test_alinti_dayanak_uyarisi(self, sahte_ask):
+        yayin = {"title": "ÖRNEK VERİ", "abstract": "Studying has been shown to increase grades. "
+                 "We surveyed students."}
+        sonuc = bul_kanit("soru", yayin)
+        self.assertEqual(sonuc["durum"], "doğrulandı")
+        self.assertIn("önceki çalışmalardan alıntı olabilir", sonuc["not"])
 
     @patch("analiz.ask", return_value="Üzgünüm, bunu yapamam.")
     def test_okunamayan_yanit(self, sahte_ask):
