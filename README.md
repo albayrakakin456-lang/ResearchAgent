@@ -137,6 +137,19 @@ py -m unittest discover tests
 
 Testler `tests/` klasöründedir ve Python'un hazır `unittest` modülünü kullanır. İnternet, API anahtarı ya da model gerektirmezler: modeli çağıran yerlerde `unittest.mock.patch` ile sahte cevap verilir. Sonuç `OK` olmalı; bir test bile başarısızsa commit atmayın.
 
+## Katkıda bulunanlar
+
+Bu proje bir **ekip çalışmasıdır**. Ortak ekip deposu: <https://github.com/MuhammetOmerd/ResearchAgent>. Katkılar commit geçmişine göre şöyle dağılır:
+
+| Kişi | Katkı |
+| --- | --- |
+| Akın Albayrak | OpenAlex kaynağı (`openalex.py`), model katmanı (`llm.py`), bulgu/dayanak analizi ve doğrulamaları (`analiz.py`), web arayüzü (`app.py`, `templates/`, `static/`) |
+| Yusuf (GitHub: Yusuf682196) | arXiv kaynağı (`arxiv.py`), DOI ve başlık birleştirme, `unittest` testleri, hata düzeltmeleri, analiz iyileştirmeleri, kütüphane erişimi araştırması |
+| İrem Akbaş | Kurulum ve elle test çalışmaları, notlar (`notlar-irem.md`) |
+| Muhammed Nur Hamduomer | İlk proje iskeleti (komut satırı raporu, demo kayıtları, README) |
+
+Ayrıntılı çalışma notları `notlar-*.md` dosyalarındadır.
+
 ## Ekip çalışması
 
 1. GitHub davetini kabul edin ve VS Code'da Git: Clone ile depoyu açın.
