@@ -141,12 +141,14 @@ Testler `tests/` klasöründedir ve Python'un hazır `unittest` modülünü kull
 
 Bu proje bir **ekip çalışmasıdır**. Ortak ekip deposu: <https://github.com/MuhammetOmerd/ResearchAgent>. Katkılar commit geçmişine göre şöyle dağılır:
 
-| Kişi | Katkı |
-| --- | --- |
-| Akın Albayrak | OpenAlex kaynağı (`openalex.py`), model katmanı (`llm.py`), bulgu/dayanak analizi ve doğrulamaları (`analiz.py`), web arayüzü (`app.py`, `templates/`, `static/`) |
-| Yusuf (GitHub: Yusuf682196) | arXiv kaynağı (`arxiv.py`), DOI ve başlık birleştirme, `unittest` testleri, hata düzeltmeleri, analiz iyileştirmeleri, kütüphane erişimi araştırması |
-| İrem Akbaş | Kurulum ve elle test çalışmaları, notlar (`notlar-irem.md`) |
-| Muhammed Nur Hamduomer | İlk proje iskeleti (komut satırı raporu, demo kayıtları, README) |
+| Kişi | Commit | Katkı |
+| --- | ---: | --- |
+| Akın Albayrak | 30 | OpenAlex kaynağı (`openalex.py`), model katmanı (`llm.py`), bulgu/dayanak analizi ve doğrulamaları (`analiz.py`), web arayüzü (`app.py`, `templates/`, `static/`) |
+| Yusuf (GitHub: Yusuf682196) | 15 | arXiv kaynağı (`arxiv.py`), DOI ve başlık birleştirme, `unittest` testleri, hata düzeltmeleri, analiz iyileştirmeleri, kütüphane erişimi araştırması |
+| İrem Akbaş | 1 | Kurulum ve elle test çalışmaları, notlar (`notlar-irem.md`) |
+| Muhammed Nur Hamduomer | 1 | İlk proje iskeleti (komut satırı raporu, demo kayıtları, README) |
+
+Commit sayıları 25 Kasım 2026 itibarıyla, birleştirme (merge) commit'leri hariçtir; toplam 47. Sayı, işin büyüklüğünü değil yalnızca commit adedini gösterir: tek commit ile yapılan iş de büyük olabilir. Güncel dağılım için GitHub'da **Insights → Contributors** sayfasına bakın.
 
 Ayrıntılı çalışma notları `notlar-*.md` dosyalarındadır.
 
